@@ -55,8 +55,6 @@ class OrchestratorAgent:
             name="OrchestratorAgent",
             model_client=model_client,
             system_message=SYSTEM_PROMPT,
-            reflect_on_tool_use=True,
-            tool_call_generator=None,
         )
         
         print("[*] OrchestratorAgent inizializzato con Microsoft Agent Framework")

@@ -26,8 +26,6 @@ class EvaluatorAgent:
             name="EvaluatorAgent",
             model_client=model_client,
             system_message=SYSTEM_PROMPT,
-            reflect_on_tool_use=True,
-            tool_call_generator=None,
         )
 
     async def evaluate_and_reflect(

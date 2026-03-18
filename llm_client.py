@@ -18,7 +18,7 @@ def generate_response(prompt: str, system_prompt: str = None) -> str:
         system_prompt = SYSTEM_PROMPT
     try:
         response = client.chat.completions.create(
-            model="gpt-5.4-nano", 
+            model="gpt-4o-mini", 
             reasoning_effort="low",
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -57,7 +57,7 @@ def generate_response_with_images(prompt: str, image_paths: list, system_prompt:
 
     try:
         response = client.chat.completions.create(
-            model="gpt-5.4-nano",
+            model="gpt-4o-mini",
             reasoning_effort="low",
             messages=[
                 {"role": "system", "content": system_prompt},

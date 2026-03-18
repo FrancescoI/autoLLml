@@ -1,6 +1,6 @@
 {
-  "roc_auc_mean": 0.8753070941861738,
-  "roc_auc_std": 0.0074533945205060605,
+  "r2_score_mean": 0.39023451081486965,
+  "r2_score_std": 0.03812741007425685,
   "num_features": 5,
   "top_correlations_with_target": {
     "delinquency_30d_freq": 0.5112581353223267,
