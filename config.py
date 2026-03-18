@@ -28,3 +28,6 @@ llm_config = {
 
 def get_llm_config():
     return llm_config.copy()
+
+MLFLOW_EXPERIMENT_NAME = os.environ.get("MLFLOW_EXPERIMENT_NAME", "AutoLLml_Experiments")
+MLFLOW_TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI", None)

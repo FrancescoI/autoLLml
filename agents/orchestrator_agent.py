@@ -11,6 +11,8 @@ from .strategy_agent import StrategyAgent
 from .code_agent import CodeAgent
 from .evaluator_agent import EvaluatorAgent
 
+import mlflow
+
 SYSTEM_PROMPT = """Sei l'Orchestrator Agent che coordina l'intero workflow di ottimizzazione AutoML.
 
 IL TUO RUOLO:
@@ -29,11 +31,19 @@ class OrchestratorAgent:
     def __init__(
         self,
         model_client: OpenAIChatCompletionClient,
-        max_iterations: int = 5
+        max_iterations: int = 5,
+        mlflow_experiment_name: str = None,
+        mlflow_tracking_uri: str = None
     ):
         self.max_iterations = max_iterations
         self.history = []
         self.business_strategy = None
+        self.mlflow_experiment_name = mlflow_experiment_name or "AutoLLml_Experiments"
+        self.mlflow_tracking_uri = mlflow_tracking_uri or os.environ.get("MLFLOW_TRACKING_URI")
+        
+        if self.mlflow_tracking_uri:
+            mlflow.set_tracking_uri(self.mlflow_tracking_uri)
+        mlflow.set_experiment(self.mlflow_experiment_name)
         
         with open("glossary.md", "r", encoding="utf-8") as f:
             self.glossary = f.read()
@@ -58,6 +68,8 @@ class OrchestratorAgent:
         )
         
         print("[*] OrchestratorAgent inizializzato con Microsoft Agent Framework")
+        print(f"[*] MLFlow Experiment: {self.mlflow_experiment_name}")
+        print(f"[*] MLFlow Tracking URI: {mlflow.get_tracking_uri()}")
 
     async def run_iteration(self, iter_num: int) -> dict:
         print(f"\n================ AVVIO ITERAZIONE {iter_num} ================")
@@ -70,7 +82,13 @@ class OrchestratorAgent:
     async def _run_baseline(self, iter_num: int) -> dict:
         print("[*] Prima run baseline (nessuna chiamata LLM). Esecuzione training loop...")
         
-        result = subprocess.run(["python", "train.py"], capture_output=True, text=True)
+        cmd = ["python", "train.py", "--iter", str(iter_num)]
+        if self.mlflow_experiment_name:
+            cmd.extend(["--experiment", self.mlflow_experiment_name])
+        if self.mlflow_tracking_uri:
+            cmd.extend(["--tracking-uri", self.mlflow_tracking_uri])
+        
+        result = subprocess.run(cmd, capture_output=True, text=True)
         stdout = result.stdout.strip()
         
         iteration_data = {"iteration": iter_num, "metric": None, "error": None}
@@ -78,7 +96,7 @@ class OrchestratorAgent:
         if "SUCCESS_METRIC" in stdout:
             metric_val = float(stdout.split("SUCCESS_METRIC: ")[1].split("\n")[0])
             iteration_data["metric"] = metric_val
-            print(f"[+] Iterazione {iter_num} - Successo. Metrica (R2): {metric_val:.4f}")
+            print(f"[+] Iterazione {iter_num} - Successo. Metrica (F1): {metric_val:.4f}")
             self._update_report(iter_num, None, None)
         else:
             iteration_data["error"] = stdout[-1000:]
@@ -128,7 +146,13 @@ class OrchestratorAgent:
             print("[!] CodeAgent ha restituito codice vuoto.")
         
         print("[*] Esecuzione training loop...")
-        result = subprocess.run(["python", "train.py"], capture_output=True, text=True)
+        cmd = ["python", "train.py", "--iter", str(iter_num)]
+        if self.mlflow_experiment_name:
+            cmd.extend(["--experiment", self.mlflow_experiment_name])
+        if self.mlflow_tracking_uri:
+            cmd.extend(["--tracking-uri", self.mlflow_tracking_uri])
+        
+        result = subprocess.run(cmd, capture_output=True, text=True)
         stdout = result.stdout.strip()
         
         iteration_data = {"iteration": iter_num, "metric": None, "error": None}
@@ -136,7 +160,7 @@ class OrchestratorAgent:
         if "SUCCESS_METRIC" in stdout:
             metric_val = float(stdout.split("SUCCESS_METRIC: ")[1].split("\n")[0])
             iteration_data["metric"] = metric_val
-            print(f"[+] Iterazione {iter_num} - Successo. Metrica (R2): {metric_val:.4f}")
+            print(f"[+] Iterazione {iter_num} - Successo. Metrica (F1): {metric_val:.4f}")
             self._update_report(iter_num, self.business_strategy, self.history[-1].get('metric'))
         else:
             iteration_data["error"] = stdout[-1000:]
