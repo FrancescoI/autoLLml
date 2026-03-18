@@ -27,6 +27,8 @@ STATO:
 - business_strategy: strategia di business generata"""
 
 
+MAX_ERROR_RETRIES = 3
+
 class OrchestratorAgent:
     def __init__(
         self,
@@ -129,14 +131,13 @@ class OrchestratorAgent:
         print(f"\n--- RIFLESSIONE ITERAZIONE {iter_num} ---\n{safe_to_print[:500]}...\n")
         
         last_code = self._load_last_code()
-        last_error = self.history[-1].get('error') if self.history else None
         
         print("[*] Generazione codice con CodeAgent...")
         new_code = await self.code_agent.generate_code(
             self.business_strategy,
             reflection_text,
             last_code,
-            last_error
+            None
         )
         
         if new_code.strip():
@@ -145,25 +146,53 @@ class OrchestratorAgent:
         else:
             print("[!] CodeAgent ha restituito codice vuoto.")
         
-        print("[*] Esecuzione training loop...")
-        cmd = ["python", "train.py", "--iter", str(iter_num)]
-        if self.mlflow_experiment_name:
-            cmd.extend(["--experiment", self.mlflow_experiment_name])
-        if self.mlflow_tracking_uri:
-            cmd.extend(["--tracking-uri", self.mlflow_tracking_uri])
+        # Try training with retries (error-fix only, no MLFlow logging)
+        retries = 0
+        current_code = new_code
+        final_metric = None
+        final_error = None
         
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        stdout = result.stdout.strip()
+        while retries < MAX_ERROR_RETRIES:
+            print(f"[*] Esecuzione training loop... (attempt {retries + 1})")
+            
+            cmd = ["python", "train.py", "--iter", str(iter_num), "--no-mlflow"]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            stdout = result.stdout.strip()
+            
+            if "SUCCESS_METRIC" in stdout:
+                metric_val = float(stdout.split("SUCCESS_METRIC: ")[1].split("\n")[0])
+                final_metric = metric_val
+                final_error = None
+                print(f"[+] Training completato. Metrica (F1): {metric_val:.4f}")
+                break
+            else:
+                retries += 1
+                if retries >= MAX_ERROR_RETRIES:
+                    final_error = stdout[-1000:]
+                    print(f"[!] Training fallito dopo {MAX_ERROR_RETRIES} tentativi")
+                    break
+                
+                error_msg = stdout[-1000:]
+                print(f"[!] Training fallito. Retry {retries}/{MAX_ERROR_RETRIES} con fix errore...")
+                print(f"[*] Errore: {error_msg[:200]}...")
+                
+                # Error-fix only (no strategy/reflection)
+                current_code = await self.code_agent.fix_code_error(
+                    error_message=error_msg,
+                    previous_code=current_code
+                )
+                
+                if current_code.strip():
+                    with open("dynamic_features.py", "w", encoding="utf-8") as f:
+                        f.write(current_code)
+                else:
+                    print("[!] CodeAgent ha restituito codice vuoto.")
         
-        iteration_data = {"iteration": iter_num, "metric": None, "error": None}
+        iteration_data = {"iteration": iter_num, "metric": final_metric, "error": final_error}
         
-        if "SUCCESS_METRIC" in stdout:
-            metric_val = float(stdout.split("SUCCESS_METRIC: ")[1].split("\n")[0])
-            iteration_data["metric"] = metric_val
-            print(f"[+] Iterazione {iter_num} - Successo. Metrica (F1): {metric_val:.4f}")
+        if final_metric is not None:
             self._update_report(iter_num, self.business_strategy, self.history[-1].get('metric'))
-        else:
-            iteration_data["error"] = stdout[-1000:]
+        elif final_error:
             print(f"[!] Iterazione {iter_num} - Fallita")
         
         self.history.append(iteration_data)

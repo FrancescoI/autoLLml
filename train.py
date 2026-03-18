@@ -52,8 +52,11 @@ def setup_mlflow_experiment(experiment_name: str = None, tracking_uri: str = Non
     
     return exp_name
 
-def main(mlflow_experiment_name: str = None, mlflow_tracking_uri: str = None, iter_num: int = 1):
-    exp_name = setup_mlflow_experiment(mlflow_experiment_name, mlflow_tracking_uri)
+def main(mlflow_experiment_name: str = None, mlflow_tracking_uri: str = None, iter_num: int = 1, enable_mlflow: bool = True):
+    if enable_mlflow:
+        exp_name = setup_mlflow_experiment(mlflow_experiment_name, mlflow_tracking_uri)
+    
+    run_id = None
     
     with mlflow.start_run(run_name=f"iteration_{iter_num}") as run:
         run_id = run.info.run_id
@@ -61,7 +64,7 @@ def main(mlflow_experiment_name: str = None, mlflow_tracking_uri: str = None, it
         
         mlflow.set_tag("iteration", iter_num)
         mlflow.log_param("iteration", iter_num)
-        mlflow.log_param("experiment_name", exp_name)
+        mlflow.log_param("experiment_name", exp_name if enable_mlflow else "disabled")
         mlflow.log_param("cv_folds", 5)
         mlflow.log_param("cv_random_state", 42)
         
@@ -298,10 +301,12 @@ if __name__ == "__main__":
     parser.add_argument("--experiment", type=str, default=None, help="MLFlow experiment name")
     parser.add_argument("--tracking-uri", type=str, default=None, help="MLFlow tracking URI")
     parser.add_argument("--iter", type=int, default=1, help="Iteration number")
+    parser.add_argument("--no-mlflow", action="store_true", help="Disable MLFlow logging")
     args = parser.parse_args()
     
     main(
         mlflow_experiment_name=args.experiment,
         mlflow_tracking_uri=args.tracking_uri,
-        iter_num=args.iter
+        iter_num=args.iter,
+        enable_mlflow=not args.no_mlflow
     )

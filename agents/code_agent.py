@@ -69,6 +69,29 @@ class CodeAgent:
         response = await self.agent.run(task=prompt)
         return self._clean_code_output(self._extract_text_from_response(response))
 
+    async def fix_code_error(self, error_message: str, previous_code: str) -> str:
+        """Generate minimal fix for code error without strategy analysis."""
+        prompt = f"""
+        Fix ONLY the error in this code. DO NOT change anything else.
+        
+        ERROR MESSAGE:
+        {error_message}
+        
+        PREVIOUS CODE:
+        {previous_code}
+        
+        Rules:
+        1. Make minimal changes to fix the error
+        2. Do NOT add new features or change strategy
+        3. Preserve all existing feature engineering logic
+        4. Only fix what's broken
+        
+        Return ONLY the fixed Python code.
+        """
+        
+        response = await self.agent.run(task=prompt)
+        return self._clean_code_output(self._extract_text_from_response(response))
+
     def _extract_text_from_response(self, response) -> str:
         if hasattr(response, 'messages'):
             for msg in reversed(response.messages):

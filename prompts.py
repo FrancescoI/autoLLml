@@ -102,3 +102,23 @@ def get_code_generation_prompt(business_strategy: str, reflection_text: str, las
         Restituisci SOLO codice Python raw, formattato correttamente. NON includere testo discorsivo o blocchi markdown (```python).
     """
     return prompt
+
+
+def get_error_fix_prompt(error_message: str, previous_code: str) -> str:
+    return f"""
+        Fix ONLY the error in this code. DO NOT change anything else.
+        
+        ERROR MESSAGE:
+        {error_message}
+        
+        PREVIOUS CODE:
+        {previous_code}
+        
+        Rules:
+        1. Make minimal changes to fix the error
+        2. Do NOT add new features or change strategy
+        3. Preserve all existing feature engineering logic
+        4. Only fix what's broken
+        
+        Return ONLY the fixed Python code.
+    """
