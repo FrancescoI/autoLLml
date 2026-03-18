@@ -1,5 +1,6 @@
 import os
 import json
+import shutil
 import mlflow
 from mlflow.tracking import MlflowClient
 from datetime import datetime
@@ -230,3 +231,60 @@ def register_best_model(model_name: str = "AutoLLml_Best", experiment_name: str 
     except Exception as e:
         print(f"[!] Could not register model: {e}")
         return None
+
+
+class ReproducibleBestModel:
+    """Save and restore best model for reproducibility.
+    
+    Keeps best dynamic_features.py and metrics in local best_run/ directory
+    (not committed to git).
+    """
+    
+    def __init__(self, experiment_name: str = None, best_dir: str = "best_run"):
+        self.experiment_name = experiment_name or EXPERIMENT_NAME
+        self.best_dir = best_dir
+    
+    def save(self):
+        """Save current dynamic_features.py + metrics to best_run/ (local only)."""
+        os.makedirs(self.best_dir, exist_ok=True)
+        
+        if os.path.exists("dynamic_features.py"):
+            shutil.copy2("dynamic_features.py", f"{self.best_dir}/dynamic_features.py")
+            print(f"[*] Saved: dynamic_features.py -> {self.best_dir}/")
+        
+        if os.path.exists("evaluation_report.json"):
+            shutil.copy2("evaluation_report.json", f"{self.best_dir}/evaluation_report.json")
+            print(f"[*] Saved: evaluation_report.json -> {self.best_dir}/")
+        
+        best_info = get_best_model_info(self.experiment_name)
+        if best_info:
+            best_info_path = f"{self.best_dir}/best_run_info.json"
+            with open(best_info_path, "w") as f:
+                json.dump(best_info, f, indent=2)
+            print(f"[*] Saved: best_run_info.json -> {self.best_dir}/")
+            print(f"[*] Best model score: {best_info.get('score_mean', 'N/A'):.4f}")
+        
+        print(f"\n[+] Best run saved to: {self.best_dir}/")
+        print("[*] This directory is local-only (not committed to git)")
+    
+    def restore(self):
+        """Copy best_run/dynamic_features.py to working directory."""
+        src = f"{self.best_dir}/dynamic_features.py"
+        if os.path.exists(src):
+            shutil.copy2(src, "dynamic_features.py")
+            print(f"[*] Restored: {self.best_dir}/dynamic_features.py -> ./dynamic_features.py")
+        else:
+            print(f"[!] No saved model found in {self.best_dir}/")
+            print("[*] Run experiments first, then save best run")
+    
+    def load_info(self) -> dict:
+        """Load best run info from saved directory."""
+        info_path = f"{self.best_dir}/best_run_info.json"
+        if os.path.exists(info_path):
+            with open(info_path, "r") as f:
+                return json.load(f)
+        return {}
+    
+    def exists(self) -> bool:
+        """Check if a saved best run exists."""
+        return os.path.exists(f"{self.best_dir}/dynamic_features.py")
