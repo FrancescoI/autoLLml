@@ -39,10 +39,7 @@ class EvaluatorAgent:
         
         prompt = self._build_prompt(iter_num, evaluation_report, glossary, plot_paths)
         
-        if plot_paths:
-            response = await self.agent.run(task=prompt, attachments=plot_paths)
-        else:
-            response = await self.agent.run(task=prompt)
+        response = await self.agent.run(task=prompt)
         
         return self._extract_text_from_response(response)
 

@@ -1,12 +1,20 @@
 {
-  "r2_score_mean": 0.39023451081486965,
-  "r2_score_std": 0.03812741007425685,
-  "num_features": 5,
+  "task_type": "classification",
+  "metric_name": "F1_weighted",
+  "score_mean": 0.8400459147330681,
+  "score_std": 0.005943143628747201,
+  "num_features": 22,
   "top_correlations_with_target": {
+    "debt_to_income": 0.5552289635090535,
+    "flag_dti_ge_1p5": 0.552432351193517,
     "delinquency_30d_freq": 0.5112581353223267,
     "tot_outstanding_debt": 0.5097084233585082,
-    "credit_lines_count": 0.36992138914931294,
-    "annual_income": 0.2176637797440191
+    "flag_delinq_ge_2": 0.4961731026618586,
+    "lines_x_delinq": 0.4753616422144673,
+    "complexity_score": 0.45270985891338805,
+    "flag_delinq_pos": 0.4396530979268252,
+    "debt_per_line": 0.4095726226616575,
+    "delinq_x_debt": 0.3804333143262377
   },
   "feature_importance": {}
 }

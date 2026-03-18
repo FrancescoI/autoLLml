@@ -6,10 +6,18 @@ load_dotenv()
 from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.teams import RoundRobinGroupChat
 from autogen_ext.models.openai import OpenAIChatCompletionClient
+from autogen_core.models import ModelInfo
 
 llm_client = OpenAIChatCompletionClient(
     model="gpt-5.4-nano",
     api_key=os.environ.get("OPENAI_API_KEY"),
+    model_info=ModelInfo(
+        vision=False,
+        function_calling=False,
+        json_output=False,
+        family="unknown",
+        structured_output=False,
+    ),
 )
 
 llm_config = {

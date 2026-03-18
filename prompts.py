@@ -84,6 +84,20 @@ def get_code_generation_prompt(business_strategy: str, reflection_text: str, las
         5. TASSATIVO: NON COSTRUIRE MAI trasformate elementari di singole feature esistenti (assolutamente NO a `np.log`, polinomi al quadrato o radici quadrate). Tutte le tue feature aggiunte devono fondere più colonne o applicare vere logiche operative.
         6. Scegli il modello di machine learning più adatto al problema.
         7. Il codice deve contenere `def apply_feature_engineering(df: pd.DataFrame) -> pd.DataFrame:` e `def get_model():`.
+        8. CRITICO: All'inizio di apply_feature_engineering(), PRESERVA la colonna target (default_flag) prima di qualsiasi trasformazione e RIPRISTINALA ALLA FINE prima di restituire il DataFrame. Usa questo pattern:
+           ```python
+           # Preserva la colonna target
+           target_col = None
+           for t in TARGET_CANDIDATES:
+               if t in df.columns:
+                   target_col = df[t].copy()  # COPIA i valori, non il nome!
+                   break
+           # ... tua logica di feature engineering ...
+           # Riproduci la colonna target
+           if target_col is not None:
+               df["default_flag"] = target_col
+           return df
+           ```
         
         Restituisci SOLO codice Python raw, formattato correttamente. NON includere testo discorsivo o blocchi markdown (```python).
     """

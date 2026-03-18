@@ -176,12 +176,14 @@ class OrchestratorAgent:
         except Exception:
             return
         
-        r2_mean = report.get("r2_score_mean", float("nan"))
-        r2_std = report.get("r2_score_std", float("nan"))
+        task_type = report.get("task_type", "unknown")
+        metric_name = report.get("metric_name", "score")
+        score_mean = report.get("score_mean", float("nan"))
+        score_std = report.get("score_std", float("nan"))
         n_feat = report.get("num_features", "?")
         
         if prev_metric is not None:
-            delta = r2_mean - prev_metric
+            delta = score_mean - prev_metric
             delta_str = f"{delta:+.4f}  {'▲' if delta >= 0 else '▼'}"
         else:
             delta_str = "— (baseline)"
@@ -203,7 +205,8 @@ class OrchestratorAgent:
             f"### Metriche\n"
             f"| Metrica | Valore |\n"
             f"|---------|--------|\n"
-            f"| R2 Mean (CV-5) | **{r2_mean:.4f}** ± {r2_std:.4f} |\n"
+            f"| Task Type | {task_type.upper()} |\n"
+            f"| {metric_name} Mean (CV-5) | **{score_mean:.4f}** ± {score_std:.4f} |\n"
             f"| Δ vs run precedente | {delta_str} |\n"
             f"| Numero feature in input | {n_feat} |\n\n"
             f"### Top correlazioni con il target (Pearson)\n{corr_md}\n\n"
