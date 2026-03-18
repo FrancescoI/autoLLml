@@ -8,7 +8,7 @@ from autogen_agentchat.teams import RoundRobinGroupChat
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 
 llm_client = OpenAIChatCompletionClient(
-    model="gpt-5-mini",
+    model="gpt-5.4-nano",
     api_key=os.environ.get("OPENAI_API_KEY"),
 )
 
