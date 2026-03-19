@@ -1,16 +1,24 @@
 import mlflow
 import mlflow.sklearn
 
-from train import (
+from .data_loader import (
     extract_target_name,
     load_dataset,
     validate_target,
     prepare_features,
     detect_task_info,
-    analyze_features,
-    generate_plots,
-    cross_validate,
+)
+
+from .feature_analyzer import analyze_features
+
+from .plot_generator import (
     ensure_plot_dir,
+    generate_plots,
+)
+
+from .trainer import cross_validate
+
+from .reporter import (
     log_training_metrics,
     log_feature_importance,
     log_artifacts,

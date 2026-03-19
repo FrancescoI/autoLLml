@@ -142,7 +142,7 @@ mlflow ui --port 5000
 ### Save Best Run
 
 ```bash
-python -c "from mlflow_utils import ReproducibleBestModel; ReproducibleBestModel().save()"
+python -c "from utils.mlflow import ReproducibleBestModel; ReproducibleBestModel().save()"
 ```
 
 This saves to `best_run/`:
@@ -153,7 +153,7 @@ This saves to `best_run/`:
 ### Restore Best Run
 
 ```bash
-python -c "from mlflow_utils import ReproducibleBestModel; ReproducibleBestModel().restore()"
+python -c "from utils.mlflow import ReproducibleBestModel; ReproducibleBestModel().restore()"
 ```
 
 ### Reset Codebase
@@ -161,7 +161,7 @@ python -c "from mlflow_utils import ReproducibleBestModel; ReproducibleBestModel
 Reset `dynamic_features.py` to baseline for new experimentation (keeps MLFlow runs):
 
 ```bash
-python reset_codebase.py
+python scripts/reset_codebase.py
 ```
 
 ### Workflow
@@ -171,13 +171,13 @@ python reset_codebase.py
 python main.py --iterations 5
 
 # 2. Save best run (local only, not in git)
-python -c "from mlflow_utils import ReproducibleBestModel; ReproducibleBestModel().save()"
+python -c "from utils.mlflow import ReproducibleBestModel; ReproducibleBestModel().save()"
 
 # 3. Reset codebase for new experiment (MLFlow preserved)
-python reset_codebase.py
+python scripts/reset_codebase.py
 
 # 4. Restore best run when needed
-python -c "from mlflow_utils import ReproducibleBestModel; ReproducibleBestModel().restore()"
+python -c "from utils.mlflow import ReproducibleBestModel; ReproducibleBestModel().restore()"
 ```
 
 ## Web UI (Experimental)

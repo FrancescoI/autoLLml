@@ -3,7 +3,7 @@ import argparse
 import sys
 import os
 
-from config import llm_client
+from utils.config import llm_client
 from agents.orchestrator_agent import OrchestratorAgent
 
 

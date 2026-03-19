@@ -34,7 +34,7 @@ class AutoMLWorkflow:
 
 
 async def run_workflow(max_iterations: int = 5):
-    from config import llm_client
+    from utils.config import llm_client
     
     workflow = AutoMLWorkflow(llm_client, max_iterations)
     await workflow.run()

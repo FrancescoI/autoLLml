@@ -5,8 +5,12 @@ import glob
 import re
 import datetime
 import pandas as pd
-from llm_client import generate_response, generate_response_with_images
-import prompts
+from utils.llm_client import generate_response, generate_response_with_images
+from prompts import (
+    get_business_strategy_prompt,
+    get_reflection_prompt,
+    get_code_generation_prompt,
+)
 
 class BusinessAwareFeatureAgent:
     def __init__(self, max_iterations=5):
@@ -35,7 +39,7 @@ class BusinessAwareFeatureAgent:
         return "\n".join(cleaned_lines)
 
     def _generate_business_and_data_strategy(self):
-        prompt = prompts.get_business_strategy_prompt(
+        prompt = get_business_strategy_prompt(
             glossary=self.glossary,
             data_schema=self.data_schema,
             data_sample=self.data_sample
@@ -73,7 +77,7 @@ class BusinessAwareFeatureAgent:
         return files[:max_plots]
 
     def _generate_reflection(self, iter_num, evaluation_report):
-        prompt = prompts.get_reflection_prompt(
+        prompt = get_reflection_prompt(
             iter_num=iter_num,
             evaluation_report=json.dumps(evaluation_report, indent=2),
             glossary=self.glossary
@@ -90,7 +94,7 @@ class BusinessAwareFeatureAgent:
         return reflection_text
 
     def _generate_code(self, reflection_text, last_code, last_error=None):
-        prompt = prompts.get_code_generation_prompt(
+        prompt = get_code_generation_prompt(
             business_strategy=self.business_strategy,
             reflection_text=reflection_text,
             last_code=last_code,
