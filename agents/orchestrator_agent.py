@@ -84,7 +84,7 @@ class OrchestratorAgent:
     async def _run_baseline(self, iter_num: int) -> dict:
         print("[*] Prima run baseline (nessuna chiamata LLM). Esecuzione training loop...")
         
-        cmd = ["python", "train.py", "--iter", str(iter_num)]
+        cmd = ["python", "-m", "train", "--iter", str(iter_num)]
         if self.mlflow_experiment_name:
             cmd.extend(["--experiment", self.mlflow_experiment_name])
         if self.mlflow_tracking_uri:
@@ -155,7 +155,7 @@ class OrchestratorAgent:
         while retries < MAX_ERROR_RETRIES:
             print(f"[*] Esecuzione training loop... (attempt {retries + 1})")
             
-            cmd = ["python", "train.py", "--iter", str(iter_num), "--no-mlflow"]
+            cmd = ["python", "-m", "train", "--iter", str(iter_num), "--no-mlflow"]
             result = subprocess.run(cmd, capture_output=True, text=True)
             stdout = result.stdout.strip()
             

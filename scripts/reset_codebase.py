@@ -1,5 +1,10 @@
 import os
 import shutil
+from pathlib import Path
+
+
+SCRIPT_DIR = Path(__file__).parent
+ROOT_DIR = SCRIPT_DIR.parent
 
 
 BASELINE_DYNAMIC_FEATURES = '''import numpy as np
@@ -70,7 +75,8 @@ def reset_codebase():
             print(f"[*] Deleted: {item}")
     
     # Write baseline dynamic_features.py
-    with open("dynamic_features.py", "w", encoding="utf-8") as f:
+    output_path = ROOT_DIR / "dynamic_features.py"
+    with open(output_path, "w", encoding="utf-8") as f:
         f.write(BASELINE_DYNAMIC_FEATURES)
     print("[*] Reset: dynamic_features.py to baseline (LogisticRegression)")
     
