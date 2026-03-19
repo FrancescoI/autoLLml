@@ -69,7 +69,7 @@ python main.py --iterations 10
 ### Training Only (No LLM)
 
 ```bash
-python train.py --iter 1 --no-mlflow
+python -m train --iter 1 --no-mlflow
 ```
 
 ## Project Structure
@@ -77,30 +77,37 @@ python train.py --iter 1 --no-mlflow
 ```
 automl/
 ├── main.py                    # Entry point (AutoGen version)
-├── agent.py                   # Original entry point
-├── workflow.py                # AutoGen workflow orchestration
-├── config.py                 # LLM configuration
-├── agents/                   # AutoGen agents
+├── agent.py                   # Legacy standalone agent
+├── utils/                     # Utilities
 │   ├── __init__.py
-│   ├── strategy_agent.py      # Business strategy generation
-│   ├── code_agent.py          # Feature engineering code
-│   ├── evaluator_agent.py     # Results analysis
-│   └── orchestrator_agent.py  # Workflow coordinator
-├── train/                    # Training pipeline (modular)
+│   ├── config.py              # LLM & MLFlow configuration (dataclasses)
+│   ├── llm_client.py          # OpenAI client wrapper
+│   └── mlflow.py              # MLFlow utilities
+├── prompts/                   # LLM prompt templates
+│   └── __init__.py
+├── agents/                    # AutoGen agents
 │   ├── __init__.py
-│   ├── data_loader.py         # Data loading & validation
-│   ├── feature_analyzer.py    # Correlation analysis
-│   ├── plot_generator.py     # Plot generation
-│   ├── trainer.py            # Cross-validation & metrics
-│   ├── reporter.py           # Report generation
-│   └── main.py               # Training orchestrator
-├── train.py                  # Training entry point
-├── dynamic_features.py        # Generated feature engineering (overwritten each iteration)
-├── prompts.py               # LLM prompt templates
-├── glossary.md              # Data dictionary & domain knowledge
-├── reset_codebase.py        # Reset to baseline
+│   ├── strategy_agent.py       # Business strategy generation
+│   ├── code_agent.py           # Feature engineering code
+│   ├── evaluator_agent.py      # Results analysis
+│   ├── orchestrator_agent.py   # Workflow coordinator
+│   └── workflow.py            # AutoGen workflow orchestration
+├── train/                     # Training pipeline (modular)
+│   ├── __init__.py
+│   ├── __main__.py            # Module entry point
+│   ├── cli.py                  # CLI interface
+│   ├── main.py                 # Training orchestrator
+│   ├── data_loader.py          # Data loading & validation
+│   ├── feature_analyzer.py     # Correlation analysis
+│   ├── plot_generator.py       # Plot generation
+│   ├── trainer.py              # Cross-validation & metrics
+│   └── reporter.py             # Report generation
+├── scripts/                   # Utility scripts
+│   └── reset_codebase.py       # Reset to baseline
+├── dynamic_features.py         # Generated feature engineering (overwritten each iteration)
+├── glossary.md               # Data dictionary & domain knowledge
 └── data/
-    └── dataset.csv             # Input dataset
+    └── dataset.csv              # Input dataset
 ```
 
 ## How It Works
@@ -114,10 +121,14 @@ automl/
 
 ## Configuration
 
-Edit `config.py` to change:
+Edit `utils/config.py` to change LLM settings via `LLMConfig` dataclass:
 - Model selection (`gpt-5`, `gpt-4`, etc.)
 - Temperature
 - Reasoning effort
+
+MLFlow settings can be customized via `MLFlowConfig` dataclass:
+- Experiment name
+- Tracking URI
 
 Edit `glossary.md` to add domain-specific knowledge about your dataset.
 
