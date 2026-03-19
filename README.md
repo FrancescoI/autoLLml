@@ -66,10 +66,10 @@ python main.py
 python main.py --iterations 10
 ```
 
-### Original Agent (Backward Compatible)
+### Training Only (No LLM)
 
 ```bash
-python agent.py
+python train.py --iter 1 --no-mlflow
 ```
 
 ## Project Structure
@@ -86,10 +86,19 @@ automl/
 │   ├── code_agent.py          # Feature engineering code
 │   ├── evaluator_agent.py     # Results analysis
 │   └── orchestrator_agent.py  # Workflow coordinator
-├── train.py                   # Training pipeline
+├── train/                    # Training pipeline (modular)
+│   ├── __init__.py
+│   ├── data_loader.py         # Data loading & validation
+│   ├── feature_analyzer.py    # Correlation analysis
+│   ├── plot_generator.py     # Plot generation
+│   ├── trainer.py            # Cross-validation & metrics
+│   ├── reporter.py           # Report generation
+│   └── main.py               # Training orchestrator
+├── train.py                  # Training entry point
 ├── dynamic_features.py        # Generated feature engineering (overwritten each iteration)
-├── prompts.py                 # LLM prompt templates
-├── glossary.md                # Data dictionary & domain knowledge
+├── prompts.py               # LLM prompt templates
+├── glossary.md              # Data dictionary & domain knowledge
+├── reset_codebase.py        # Reset to baseline
 └── data/
     └── dataset.csv             # Input dataset
 ```
@@ -132,8 +141,6 @@ mlflow ui --port 5000
 
 ### Save Best Run
 
-After optimization, save the best model locally:
-
 ```bash
 python -c "from mlflow_utils import ReproducibleBestModel; ReproducibleBestModel().save()"
 ```
@@ -172,6 +179,12 @@ python reset_codebase.py
 # 4. Restore best run when needed
 python -c "from mlflow_utils import ReproducibleBestModel; ReproducibleBestModel().restore()"
 ```
+
+## Web UI (Experimental)
+
+For a custom web dashboard, see the `custom_web_ui` branch which includes:
+- FastAPI backend
+- HTML dashboard with Tailwind CSS
 
 ## License
 
