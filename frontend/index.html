@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoML Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        .tab-active { border-bottom: 2px solid #3b82f6; color: #3b82f6; }
+        .log-error { color: #ef4444; }
+        .log-success { color: #22c55e; }
+        .log-warning { color: #eab308; }
+        .log-info { color: #94a3b8; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <span class="text-2xl mr-2">🤖</span>
+                    <span class="text-xl font-bold text-gray-900">AutoML Dashboard</span>
+                </div>
+                <div class="flex space-x-1">
+                    <button onclick="showPage('config')" id="tab-config" class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 tab-active">Config</button>
+                    <button onclick="showPage('training')" id="tab-training" class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900">Training</button>
+                    <button onclick="showPage('results')" id="tab-results" class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900">Results</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Config Page -->
+        <div id="page-config" class="page">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Dataset Upload -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center">
+                        <span class="mr-2">📁</span> Dataset
+                    </h2>
+                    
+                    <div id="dataset-info" class="hidden mb-4">
+                        <div class="flex items-center text-green-600 mb-2">
+                            <span class="mr-2">✅</span>
+                            <span id="dataset-name" class="font-medium"></span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-sm text-gray-600">
+                            <div>Rows: <span id="dataset-rows" class="font-medium"></span></div>
+                            <div>Columns: <span id="dataset-cols" class="font-medium"></span></div>
+                        </div>
+                    </div>
+                    
+                    <label class="block border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 transition-colors">
+                        <span class="text-gray-600">Click to upload CSV</span>
+                        <input type="file" id="file-upload" accept=".csv" class="hidden" onchange="handleFileUpload(this)">
+                    </label>
+                    <p id="upload-status" class="mt-2 text-sm"></p>
+                </div>
+
+                <!-- Glossary Editor -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center">
+                        <span class="mr-2">📝</span> Glossary
+                    </h2>
+                    
+                    <textarea id="glossary-editor" class="w-full h-48 p-3 border border-gray-300 rounded-lg font-mono text-sm" placeholder="Define your glossary in Markdown..."></textarea>
+                    
+                    <button onclick="saveGlossary()" class="mt-3 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        💾 Save Glossary
+                    </button>
+                    <p id="glossary-status" class="mt-2 text-sm"></p>
+                </div>
+            </div>
+
+            <!-- Training Parameters -->
+            <div class="bg-white rounded-xl shadow-md p-6 mt-6">
+                <h2 class="text-lg font-semibold mb-4">Training Parameters</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Max Iterations</label>
+                        <input type="number" id="param-iterations" value="5" min="1" max="50" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">MLFlow Experiment</label>
+                        <input type="text" id="param-experiment" value="AutoLLml_Experiments" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div class="flex items-center pt-6">
+                        <input type="checkbox" id="param-mlflow" checked class="w-4 h-4 text-blue-600 rounded">
+                        <label for="param-mlflow" class="ml-2 text-sm text-gray-700">Enable MLFlow Tracking</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Training Page -->
+        <div id="page-training" class="page hidden">
+            <!-- Stats Row -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h3 class="text-sm font-medium text-gray-500">Status</h3>
+                    <p id="training-status" class="text-2xl font-bold mt-1 text-gray-600">IDLE</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h3 class="text-sm font-medium text-gray-500">Progress</h3>
+                    <p id="training-progress" class="text-2xl font-bold mt-1">0 / 5</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h3 class="text-sm font-medium text-gray-500">Best Metric</h3>
+                    <p id="training-best" class="text-2xl font-bold mt-1 text-green-600">—</p>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div id="progress-bar-container" class="hidden mb-6">
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div id="progress-bar" class="bg-blue-600 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Logs -->
+                <div class="lg:col-span-2 bg-white rounded-xl shadow-md p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-semibold">📋 Training Logs</h2>
+                        <button onclick="refreshStatus()" class="px-3 py-1 text-sm bg-gray-100 rounded hover:bg-gray-200">🔄 Refresh</button>
+                    </div>
+                    <div id="logs-container" class="bg-gray-900 rounded-lg p-4 h-96 overflow-y-auto font-mono text-sm">
+                        <p class="text-gray-500">No logs yet. Start training to see logs.</p>
+                    </div>
+                </div>
+
+                <!-- History -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h2 class="text-lg font-semibold mb-4">Iteration History</h2>
+                    <div id="history-container" class="space-y-3">
+                        <p class="text-gray-500 text-sm">No iterations yet.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="bg-white rounded-xl shadow-md p-6 mt-6">
+                <div class="flex items-center space-x-4">
+                    <button id="btn-start" onclick="startTraining()" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-medium flex items-center">
+                        ▶️ Start Training
+                    </button>
+                    <button id="btn-stop" onclick="stopTraining()" class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 font-medium flex items-center hidden">
+                        ⏹️ Stop Training
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Page -->
+        <div id="page-results" class="page hidden">
+            <!-- Stats -->
+            <div id="results-stats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h3 class="text-sm font-medium text-gray-500">Task Type</h3>
+                    <p id="result-task" class="text-xl font-bold text-blue-600 mt-1">—</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h3 class="text-sm font-medium text-gray-500">Score Mean</h3>
+                    <p id="result-mean" class="text-xl font-bold text-green-600 mt-1">—</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h3 class="text-sm font-medium text-gray-500">Score Std</h3>
+                    <p id="result-std" class="text-xl font-bold mt-1">—</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h3 class="text-sm font-medium text-gray-500">Features</h3>
+                    <p id="result-features" class="text-xl font-bold mt-1">—</p>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex border-b mb-6">
+                <button onclick="showResultTab('metrics')" id="tab-metrics" class="px-4 py-2 font-medium border-b-2 border-blue-600 text-blue-600">Metrics</button>
+                <button onclick="showResultTab('plots')" id="tab-plots" class="px-4 py-2 font-medium border-b-2 border-transparent text-gray-600">Plots</button>
+                <button onclick="showResultTab('features')" id="tab-features" class="px-4 py-2 font-medium border-b-2 border-transparent text-gray-600">Features</button>
+                <button onclick="showResultTab('code')" id="tab-code" class="px-4 py-2 font-medium border-b-2 border-transparent text-gray-600">Code</button>
+            </div>
+
+            <!-- Metrics Tab -->
+            <div id="result-metrics" class="result-tab">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-xl shadow-md p-6">
+                        <h2 class="text-lg font-semibold mb-4">Feature Importance</h2>
+                        <canvas id="chart-importance"></canvas>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-md p-6">
+                        <h2 class="text-lg font-semibold mb-4">Correlations</h2>
+                        <canvas id="chart-correlations"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Plots Tab -->
+            <div id="result-plots" class="result-tab hidden">
+                <div id="plots-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <p class="text-gray-500 col-span-full">No plots available.</p>
+                </div>
+            </div>
+
+            <!-- Features Tab -->
+            <div id="result-features" class="result-tab hidden">
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h2 class="text-lg font-semibold mb-4">Engineered Features</h2>
+                    <div id="features-container" class="flex flex-wrap gap-2">
+                        <p class="text-gray-500">No features generated.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Code Tab -->
+            <div id="result-code" class="result-tab hidden">
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-semibold">Generated Code</h2>
+                        <button onclick="downloadCode()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">📥 Download</button>
+                    </div>
+                    <pre id="code-container" class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto font-mono text-sm max-h-96">No code generated.</pre>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API_BASE = '/api';
+        let currentPage = 'config';
+        let importanceChart = null;
+        let correlationChart = null;
+        let pollingInterval = null;
+
+        async function api(endpoint, options = {}) {
+            const response = await fetch(`${API_BASE}${endpoint}`, {
+                headers: { 'Content-Type': 'application/json' },
+                ...options
+            });
+            if (!response.ok) throw new Error(await response.text());
+            return response.json();
+        }
+
+        function showPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+            document.getElementById(`page-${page}`).classList.remove('hidden');
+            document.querySelectorAll('[id^="tab-"]').forEach(t => t.classList.remove('tab-active'));
+            document.getElementById(`tab-${page}`).classList.add('tab-active');
+            currentPage = page;
+            
+            if (page === 'training') {
+                startPolling();
+                refreshStatus();
+            } else {
+                stopPolling();
+            }
+            
+            if (page === 'results') {
+                loadResults();
+            }
+        }
+
+        function showResultTab(tab) {
+            document.querySelectorAll('.result-tab').forEach(t => t.classList.add('hidden'));
+            document.querySelectorAll('[id^="tab-"]').forEach(t => {
+                if (t.id.startsWith('tab-') && !['tab-config', 'tab-training', 'tab-results'].includes(t.id)) {
+                    t.classList.remove('border-blue-600', 'text-blue-600');
+                    t.classList.add('border-transparent', 'text-gray-600');
+                }
+            });
+            document.getElementById(`result-${tab}`).classList.remove('hidden');
+            const tabBtn = document.getElementById(`tab-${tab}`);
+            tabBtn.classList.add('border-blue-600', 'text-blue-600');
+            tabBtn.classList.remove('border-transparent', 'text-gray-600');
+        }
+
+        // Dataset
+        async function loadDatasetInfo() {
+            try {
+                const info = await api('/dataset/info');
+                document.getElementById('dataset-info').classList.remove('hidden');
+                document.getElementById('dataset-name').textContent = info.filename;
+                document.getElementById('dataset-rows').textContent = info.rows;
+                document.getElementById('dataset-cols').textContent = info.columns;
+            } catch (e) {
+                document.getElementById('dataset-info').classList.add('hidden');
+            }
+        }
+
+        async function handleFileUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            document.getElementById('upload-status').textContent = 'Uploading...';
+            document.getElementById('upload-status').className = 'mt-2 text-sm text-blue-600';
+            
+            try {
+                const response = await fetch(`${API_BASE}/dataset/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                document.getElementById('upload-status').textContent = '✅ Uploaded successfully!';
+                document.getElementById('upload-status').className = 'mt-2 text-sm text-green-600';
+                loadDatasetInfo();
+            } catch (e) {
+                document.getElementById('upload-status').textContent = '❌ Upload failed';
+                document.getElementById('upload-status').className = 'mt-2 text-sm text-red-600';
+            }
+        }
+
+        // Glossary
+        async function loadGlossary() {
+            try {
+                const result = await api('/glossary/');
+                document.getElementById('glossary-editor').value = result.content;
+            } catch (e) {
+                document.getElementById('glossary-editor').value = '';
+            }
+        }
+
+        async function saveGlossary() {
+            const content = document.getElementById('glossary-editor').value;
+            try {
+                await api('/glossary/save', {
+                    method: 'POST',
+                    body: JSON.stringify({ content })
+                });
+                document.getElementById('glossary-status').textContent = '✅ Saved!';
+                document.getElementById('glossary-status').className = 'mt-2 text-sm text-green-600';
+            } catch (e) {
+                document.getElementById('glossary-status').textContent = '❌ Save failed';
+                document.getElementById('glossary-status').className = 'mt-2 text-sm text-red-600';
+            }
+        }
+
+        // Training
+        async function refreshStatus() {
+            try {
+                const [status, logs, history] = await Promise.all([
+                    api('/training/status'),
+                    api('/training/logs'),
+                    api('/training/history')
+                ]);
+                
+                updateTrainingUI(status, logs.logs, history.history);
+            } catch (e) {
+                console.error('Failed to refresh status:', e);
+            }
+        }
+
+        function updateTrainingUI(status, logs, history) {
+            const statusEl = document.getElementById('training-status');
+            statusEl.textContent = status.status.toUpperCase();
+            statusEl.className = `text-2xl font-bold mt-1 ${
+                status.status === 'running' ? 'text-blue-600' :
+                status.status === 'completed' ? 'text-green-600' :
+                status.status === 'failed' ? 'text-red-600' : 'text-gray-600'
+            }`;
+            
+            document.getElementById('training-progress').textContent = `${status.current_iteration} / ${status.max_iterations}`;
+            document.getElementById('training-best').textContent = status.best_metric ? status.best_metric.toFixed(4) : '—';
+            
+            const progressBarContainer = document.getElementById('progress-bar-container');
+            const progressBar = document.getElementById('progress-bar');
+            if (status.status === 'running') {
+                progressBarContainer.classList.remove('hidden');
+                progressBar.style.width = `${(status.current_iteration / status.max_iterations) * 100}%`;
+            } else {
+                progressBarContainer.classList.add('hidden');
+            }
+            
+            // Buttons
+            const btnStart = document.getElementById('btn-start');
+            const btnStop = document.getElementById('btn-stop');
+            if (status.status === 'running') {
+                btnStart.classList.add('hidden');
+                btnStop.classList.remove('hidden');
+            } else {
+                btnStart.classList.remove('hidden');
+                btnStop.classList.add('hidden');
+            }
+            
+            // Logs
+            const logsContainer = document.getElementById('logs-container');
+            if (logs.length > 0) {
+                logsContainer.innerHTML = logs.map(log => {
+                    const levelClass = `log-${log.level}`;
+                    return `<div class="py-1"><span class="log-info">[${log.timestamp}]</span> <span class="${levelClass}">${log.message}</span></div>`;
+                }).join('');
+                logsContainer.scrollTop = logsContainer.scrollHeight;
+            }
+            
+            // History
+            const historyContainer = document.getElementById('history-container');
+            if (history.iterations && history.iterations.length > 0) {
+                historyContainer.innerHTML = history.iterations.map(iter => `
+                    <div class="p-3 rounded-lg border ${iter.metric !== null ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}">
+                        <div class="flex items-center justify-between">
+                            <span class="font-medium">Iteration ${iter.iteration}</span>
+                            ${iter.metric !== null 
+                                ? `<span class="text-green-600 font-bold">${iter.metric.toFixed(4)}</span>`
+                                : `<span>❌</span>`
+                            }
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1">${new Date(iter.timestamp).toLocaleTimeString()}</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        async function startTraining() {
+            const params = {
+                max_iterations: parseInt(document.getElementById('param-iterations').value),
+                mlflow_experiment_name: document.getElementById('param-experiment').value,
+                mlflow_tracking_enabled: document.getElementById('param-mlflow').checked
+            };
+            
+            try {
+                await api('/training/start', {
+                    method: 'POST',
+                    body: JSON.stringify(params)
+                });
+                startPolling();
+                refreshStatus();
+            } catch (e) {
+                alert('Failed to start training: ' + e.message);
+            }
+        }
+
+        async function stopTraining() {
+            try {
+                await api('/training/stop', { method: 'POST' });
+                refreshStatus();
+            } catch (e) {
+                alert('Failed to stop training: ' + e.message);
+            }
+        }
+
+        function startPolling() {
+            if (pollingInterval) return;
+            pollingInterval = setInterval(refreshStatus, 2000);
+        }
+
+        function stopPolling() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+        }
+
+        // Results
+        async function loadResults() {
+            try {
+                const [report, plots, features, code] = await Promise.all([
+                    api('/results/latest').catch(() => null),
+                    api('/results/plots').catch(() => ({ plots: [] })),
+                    api('/results/features').catch(() => ({ features: [] })),
+                    api('/results/code').catch(() => ({ code: '' }))
+                ]);
+                
+                updateResultsUI(report, plots.plots, features.features, code.code);
+            } catch (e) {
+                console.error('Failed to load results:', e);
+            }
+        }
+
+        function updateResultsUI(report, plots, features, code) {
+            if (report) {
+                document.getElementById('result-task').textContent = report.task_type.toUpperCase();
+                document.getElementById('result-mean').textContent = report.score_mean.toFixed(4);
+                document.getElementById('result-std').textContent = report.score_std.toFixed(4);
+                document.getElementById('result-features').textContent = report.num_features;
+                
+                renderCharts(report);
+            }
+            
+            // Plots
+            const plotsContainer = document.getElementById('plots-container');
+            if (plots.length > 0) {
+                plotsContainer.innerHTML = plots.map(plot => `
+                    <div class="bg-white rounded-xl shadow-md p-4">
+                        <img src="${API_BASE}/results/plot/${plot.name}" alt="${plot.name}" class="w-full rounded">
+                        <p class="text-sm text-gray-600 mt-2 truncate">${plot.name}</p>
+                    </div>
+                `).join('');
+            } else {
+                plotsContainer.innerHTML = '<p class="text-gray-500 col-span-full">No plots available.</p>';
+            }
+            
+            // Features
+            const featuresContainer = document.getElementById('features-container');
+            if (features.length > 0) {
+                featuresContainer.innerHTML = features.map(f => 
+                    `<span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-mono">${f}</span>`
+                ).join('');
+            } else {
+                featuresContainer.innerHTML = '<p class="text-gray-500">No features generated.</p>';
+            }
+            
+            // Code
+            const codeContainer = document.getElementById('code-container');
+            codeContainer.textContent = code || 'No code generated.';
+        }
+
+        function renderCharts(report) {
+            // Importance Chart
+            const importanceCtx = document.getElementById('chart-importance').getContext('2d');
+            if (importanceChart) importanceChart.destroy();
+            
+            const importanceData = Object.entries(report.feature_importance || {})
+                .sort(([,a], [,b]) => b - a).slice(0, 10);
+            
+            importanceChart = new Chart(importanceCtx, {
+                type: 'bar',
+                data: {
+                    labels: importanceData.map(([k]) => k),
+                    datasets: [{
+                        label: 'Importance',
+                        data: importanceData.map(([,v]) => v),
+                        backgroundColor: '#3b82f6'
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    plugins: { legend: { display: false } }
+                }
+            });
+            
+            // Correlation Chart
+            const correlationCtx = document.getElementById('chart-correlations').getContext('2d');
+            if (correlationChart) correlationChart.destroy();
+            
+            const correlationData = Object.entries(report.top_correlations_with_target || {})
+                .sort(([,a], [,b]) => Math.abs(b) - Math.abs(a)).slice(0, 10);
+            
+            correlationChart = new Chart(correlationCtx, {
+                type: 'bar',
+                data: {
+                    labels: correlationData.map(([k]) => k),
+                    datasets: [{
+                        label: 'Correlation',
+                        data: correlationData.map(([,v]) => v),
+                        backgroundColor: '#10b981'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function downloadCode() {
+            const code = document.getElementById('code-container').textContent;
+            const blob = new Blob([code], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'dynamic_features.py';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDatasetInfo();
+            loadGlossary();
+            showPage('config');
+        });
+    </script>
+</body>
+</html>
