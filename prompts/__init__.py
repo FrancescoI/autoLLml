@@ -104,21 +104,52 @@ def get_code_generation_prompt(business_strategy: str, reflection_text: str, las
     return prompt
 
 
+def _extract_relevant_function(error_message: str, code: str) -> str:
+    import re
+    match = re.search(r'in (\w+)\s*$|File ".+?", line \d+, in (\w+)', error_message, re.MULTILINE)
+    func_name = match.group(1) or match.group(2) if match else None
+    
+    if func_name and func_name in ['apply_feature_engineering', 'get_model']:
+        lines = code.split('\n')
+        func_start = -1
+        func_lines = []
+        in_function = False
+        indent_level = None
+        
+        for i, line in enumerate(lines):
+            if f'def {func_name}' in line:
+                func_start = i
+                in_function = True
+                indent_level = len(line) - len(line.lstrip())
+                func_lines.append(line)
+                continue
+            
+            if in_function:
+                if line.strip() and not line.startswith(' ' * indent_level) and not line.startswith('\t'):
+                    break
+                func_lines.append(line)
+        
+        if func_start >= 0:
+            return '\n'.join(func_lines)
+    
+    return code
+
+
 def get_error_fix_prompt(error_message: str, previous_code: str) -> str:
-    return f"""
-        Fix ONLY the error in this code. DO NOT change anything else.
-        
-        ERROR MESSAGE:
-        {error_message}
-        
-        PREVIOUS CODE:
-        {previous_code}
-        
-        Rules:
-        1. Make minimal changes to fix the error
-        2. Do NOT add new features or change strategy
-        3. Preserve all existing feature engineering logic
-        4. Only fix what's broken
-        
-        Return ONLY the fixed Python code.
-    """
+    relevant_code = _extract_relevant_function(error_message, previous_code)
+    
+    return f"""Fix ONLY the error in this code. DO NOT change anything else.
+
+ERROR:
+{error_message}
+
+CODE TO FIX:
+{relevant_code}
+
+Rules:
+1. Make minimal changes to fix the error
+2. Do NOT add new features or change strategy
+3. Preserve all existing feature engineering logic
+4. Only fix what's broken
+
+Return ONLY the fixed Python code."""

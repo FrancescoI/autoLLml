@@ -4,7 +4,6 @@ import subprocess
 import datetime
 import re
 import pandas as pd
-from autogen_agentchat.agents import AssistantAgent
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 
 from .strategy_agent import StrategyAgent
@@ -13,20 +12,6 @@ from .evaluator_agent import EvaluatorAgent
 
 import mlflow
 
-SYSTEM_PROMPT = """Sei l'Orchestrator Agent che coordina l'intero workflow di ottimizzazione AutoML.
-
-IL TUO RUOLO:
-1. Coordinare la comunicazione tra StrategyAgent, CodeAgent ed EvaluatorAgent
-2. Gestire il loop di iterazioni
-3. Mantenere lo stato e la storia delle run
-4. Decidere quando terminare l'ottimizzazione
-
-STATO:
-- max_iterations: numero massimo di iterazioni
-- history: lista delle iterazioni precedenti con metriche
-- business_strategy: strategia di business generata"""
-
-
 MAX_ERROR_RETRIES = 3
 
 class OrchestratorAgent:
@@ -34,12 +19,12 @@ class OrchestratorAgent:
         self,
         model_client: OpenAIChatCompletionClient,
         max_iterations: int = 5,
-        mlflow_experiment_name: str = None,
-        mlflow_tracking_uri: str = None
+        mlflow_experiment_name: str | None = None,
+        mlflow_tracking_uri: str | None = None
     ):
         self.max_iterations = max_iterations
         self.history = []
-        self.business_strategy = None
+        self.business_strategy: str | None = None
         self.mlflow_experiment_name = mlflow_experiment_name or "AutoLLml_Experiments"
         self.mlflow_tracking_uri = mlflow_tracking_uri or os.environ.get("MLFLOW_TRACKING_URI")
         
@@ -53,7 +38,7 @@ class OrchestratorAgent:
         try:
             df = pd.read_csv("data/dataset.csv", encoding="latin-1")
             self.data_schema = str(df.dtypes.to_dict())
-            self.data_sample = str(df.head(3).to_dict())
+            self.data_sample = str(df.head(1).to_dict())
         except FileNotFoundError:
             print("[!] Assicurati di inserire il file in data/dataset.csv prima di avviare.")
             self.data_schema = "Dati non caricati."
@@ -63,13 +48,7 @@ class OrchestratorAgent:
         self.code_agent = CodeAgent(model_client)
         self.evaluator_agent = EvaluatorAgent(model_client)
         
-        self.agent = AssistantAgent(
-            name="OrchestratorAgent",
-            model_client=model_client,
-            system_message=SYSTEM_PROMPT,
-        )
-        
-        print("[*] OrchestratorAgent inizializzato con Microsoft Agent Framework")
+        print("[*] OrchestratorAgent inizializzato")
         print(f"[*] MLFlow Experiment: {self.mlflow_experiment_name}")
         print(f"[*] MLFlow Tracking URI: {mlflow.get_tracking_uri()}")
 
