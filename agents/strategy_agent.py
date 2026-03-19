@@ -1,7 +1,8 @@
 import json
 from autogen_agentchat.agents import AssistantAgent
-from autogen_agentchat.messages import TextMessage
 from autogen_ext.models.openai import OpenAIChatCompletionClient
+
+from dto import StrategyInput, StrategyOutput
 
 SYSTEM_PROMPT = """Sei un Senior Data Scientist esperto in Machine Learning e Artificial Intelligence, con una forte mentalità orientata al Business e al Domain Knowledge.
 
@@ -26,16 +27,22 @@ class StrategyAgent:
             system_message=SYSTEM_PROMPT,
         )
 
-    async def generate_strategy(self, glossary: str, data_schema: str, data_sample: str) -> dict:
+    async def generate_strategy(self, glossary: str, data_schema: str, data_sample: str) -> StrategyOutput:
+        validated_input = StrategyInput(
+            glossary=glossary,
+            data_schema=data_schema,
+            data_sample=data_sample
+        )
+        
         prompt = f"""
         Analizza i seguenti metadati di progetto:
         
         # GLOSSARIO SEMANTICO
-        {glossary}
+        {validated_input.glossary}
         
         # SCHEMA E SAMPLE DATI
-        {data_schema}
-        {data_sample}
+        {validated_input.data_schema}
+        {validated_input.data_sample}
         
         Obiettivo: Genera strategie di business per feature engineering predittivo basato sul dominio.
         
@@ -55,7 +62,7 @@ class StrategyAgent:
                     return str(msg.content)
         return str(response)
 
-    def _parse_response(self, response_text: str) -> dict:
+    def _parse_response(self, response_text: str) -> StrategyOutput:
         try:
             if not response_text.strip():
                 return self._default_strategy()
@@ -66,15 +73,15 @@ class StrategyAgent:
                     response_text = response_text[:-3]
             
             strategy_data = json.loads(response_text)
-            return {
-                'business_strategy': strategy_data.get('business_strategy', ''),
-                'model_selection': strategy_data.get('model_selection', '')
-            }
+            return StrategyOutput(
+                business_strategy=strategy_data.get('business_strategy', ''),
+                model_selection=strategy_data.get('model_selection', '')
+            )
         except json.JSONDecodeError:
             return self._default_strategy()
 
-    def _default_strategy(self) -> dict:
-        return {
-            'business_strategy': 'Massimizza la monotonicità logica ed esplora interazioni non lineari basate sul glossario.',
-            'model_selection': 'RandomForestClassifier: robusto a overfitting; GradientBoosting: alta precisione predittiva.'
-        }
+    def _default_strategy(self) -> StrategyOutput:
+        return StrategyOutput(
+            business_strategy='Massimizza la monotonicità logica ed esplora interazioni non lineari basate sul glossario.',
+            model_selection='RandomForestClassifier: robusto a overfitting; GradientBoosting: alta precisione predittiva.'
+        )

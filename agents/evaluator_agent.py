@@ -1,9 +1,10 @@
 import json
 import os
 import glob
-import base64
 from autogen_agentchat.agents import AssistantAgent
 from autogen_ext.models.openai import OpenAIChatCompletionClient
+
+from dto import EvaluatorInput, EvaluatorOutput
 
 SYSTEM_PROMPT = """Sei un Evaluator Agent specializzato nell'analisi di risultati ML e riflessione strategica.
 
@@ -34,14 +35,27 @@ class EvaluatorAgent:
         evaluation_report: dict,
         glossary: str,
         plot_dir: str = "evaluation_plots"
-    ) -> str:
-        plot_paths = self._load_evaluation_plots(plot_dir)
+    ) -> EvaluatorOutput:
+        validated_input = EvaluatorInput(
+            iter_num=iter_num,
+            evaluation_report=evaluation_report,
+            glossary=glossary,
+            plot_dir=plot_dir
+        )
         
-        prompt = self._build_prompt(iter_num, evaluation_report, glossary, plot_paths)
+        plot_paths = self._load_evaluation_plots(validated_input.plot_dir)
+        
+        prompt = self._build_prompt(
+            validated_input.iter_num,
+            validated_input.evaluation_report,
+            validated_input.glossary,
+            plot_paths
+        )
         
         response = await self.agent.run(task=prompt)
         
-        return self._extract_text_from_response(response)
+        reflection_text = self._extract_text_from_response(response)
+        return EvaluatorOutput(reflection_text=reflection_text)
 
     def _build_prompt(
         self,

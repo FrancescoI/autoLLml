@@ -12,6 +12,8 @@ from dynamic_features import apply_feature_engineering, get_model
 import mlflow
 import mlflow.sklearn
 
+from dto import TrainCLIArgs, EvaluationReport
+
 TARGET_CANDIDATES = ['default_flag', 'consumo_annuo', 'target']
 
 def extract_target_name(glossary_path="glossary.md"):
@@ -53,8 +55,17 @@ def setup_mlflow_experiment(experiment_name: str = None, tracking_uri: str = Non
     return exp_name
 
 def main(mlflow_experiment_name: str = None, mlflow_tracking_uri: str = None, iter_num: int = 1, enable_mlflow: bool = True):
-    if enable_mlflow:
-        exp_name = setup_mlflow_experiment(mlflow_experiment_name, mlflow_tracking_uri)
+    validated_args = TrainCLIArgs(
+        experiment=mlflow_experiment_name,
+        tracking_uri=mlflow_tracking_uri,
+        iter_num=iter_num,
+        no_mlflow=not enable_mlflow
+    )
+    
+    if validated_args.no_mlflow:
+        exp_name = "disabled"
+    else:
+        exp_name = setup_mlflow_experiment(validated_args.experiment, validated_args.tracking_uri)
     
     run_id = None
     
@@ -268,19 +279,19 @@ def main(mlflow_experiment_name: str = None, mlflow_tracking_uri: str = None, it
                 
                 mlflow.log_dict(importance_dict, "feature_importance.json")
 
-            report = {
-                "task_type": task_type,
-                "metric_name": metric_name,
-                "score_mean": mean_score,
-                "score_std": std_score,
-                "num_features": len(X.columns),
-                "top_correlations_with_target": top_corr_dict,
-                "feature_importance": importance_dict,
-                "mlflow_run_id": run_id
-            }
+            evaluation_report = EvaluationReport(
+                task_type=task_type,
+                metric_name=metric_name,
+                score_mean=mean_score,
+                score_std=std_score,
+                num_features=len(X.columns),
+                top_correlations_with_target=top_corr_dict,
+                feature_importance=importance_dict,
+                mlflow_run_id=run_id
+            )
             
             with open("evaluation_report.json", "w") as f:
-                json.dump(report, f, indent=2)
+                json.dump(evaluation_report.to_dict(), f, indent=2)
             
             mlflow.log_artifact("evaluation_report.json")
             mlflow.log_artifact("dynamic_features.py")

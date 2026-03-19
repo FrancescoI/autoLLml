@@ -5,6 +5,7 @@ import os
 
 from config import llm_client
 from agents.orchestrator_agent import OrchestratorAgent
+from dto import CLIArgs
 
 
 async def main(
@@ -12,6 +13,12 @@ async def main(
     mlflow_experiment_name: str = None,
     mlflow_tracking_uri: str = None
 ):
+    validated_args = CLIArgs(
+        iterations=max_iterations,
+        experiment=mlflow_experiment_name,
+        tracking_uri=mlflow_tracking_uri
+    )
+    
     print("=" * 60)
     print("   AutoML Agent con Microsoft Agent Framework")
     print("   + MLFlow Experiment Tracking")
@@ -20,9 +27,9 @@ async def main(
     
     orchestrator = OrchestratorAgent(
         llm_client,
-        max_iterations,
-        mlflow_experiment_name=mlflow_experiment_name,
-        mlflow_tracking_uri=mlflow_tracking_uri
+        validated_args.iterations,
+        mlflow_experiment_name=validated_args.experiment,
+        mlflow_tracking_uri=validated_args.tracking_uri
     )
     
     await orchestrator.optimize()

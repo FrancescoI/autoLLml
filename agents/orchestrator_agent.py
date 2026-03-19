@@ -10,6 +10,7 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 from .strategy_agent import StrategyAgent
 from .code_agent import CodeAgent
 from .evaluator_agent import EvaluatorAgent
+from dto import OrchestratorConfig, IterationResult, EvaluationReport
 
 import mlflow
 
@@ -37,11 +38,18 @@ class OrchestratorAgent:
         mlflow_experiment_name: str = None,
         mlflow_tracking_uri: str = None
     ):
-        self.max_iterations = max_iterations
+        validated_config = OrchestratorConfig(
+            model_client=model_client,
+            max_iterations=max_iterations,
+            mlflow_experiment_name=mlflow_experiment_name,
+            mlflow_tracking_uri=mlflow_tracking_uri
+        )
+        
+        self.max_iterations = validated_config.max_iterations
         self.history = []
         self.business_strategy = None
-        self.mlflow_experiment_name = mlflow_experiment_name or "AutoLLml_Experiments"
-        self.mlflow_tracking_uri = mlflow_tracking_uri or os.environ.get("MLFLOW_TRACKING_URI")
+        self.mlflow_experiment_name = validated_config.mlflow_experiment_name or "AutoLLml_Experiments"
+        self.mlflow_tracking_uri = validated_config.mlflow_tracking_uri or os.environ.get("MLFLOW_TRACKING_URI")
         
         if self.mlflow_tracking_uri:
             mlflow.set_tracking_uri(self.mlflow_tracking_uri)
@@ -73,7 +81,7 @@ class OrchestratorAgent:
         print(f"[*] MLFlow Experiment: {self.mlflow_experiment_name}")
         print(f"[*] MLFlow Tracking URI: {mlflow.get_tracking_uri()}")
 
-    async def run_iteration(self, iter_num: int) -> dict:
+    async def run_iteration(self, iter_num: int) -> IterationResult:
         print(f"\n================ AVVIO ITERAZIONE {iter_num} ================")
         
         if iter_num == 1:
@@ -81,7 +89,7 @@ class OrchestratorAgent:
         
         return await self._run_llm_iteration(iter_num)
 
-    async def _run_baseline(self, iter_num: int) -> dict:
+    async def _run_baseline(self, iter_num: int) -> IterationResult:
         print("[*] Prima run baseline (nessuna chiamata LLM). Esecuzione training loop...")
         
         cmd = ["python", "train.py", "--iter", str(iter_num)]
@@ -93,21 +101,21 @@ class OrchestratorAgent:
         result = subprocess.run(cmd, capture_output=True, text=True)
         stdout = result.stdout.strip()
         
-        iteration_data = {"iteration": iter_num, "metric": None, "error": None}
+        iteration_result = IterationResult(iteration=iter_num, metric=None, error=None)
         
         if "SUCCESS_METRIC" in stdout:
             metric_val = float(stdout.split("SUCCESS_METRIC: ")[1].split("\n")[0])
-            iteration_data["metric"] = metric_val
+            iteration_result.metric = metric_val
             print(f"[+] Iterazione {iter_num} - Successo. Metrica (F1): {metric_val:.4f}")
             self._update_report(iter_num, None, None)
         else:
-            iteration_data["error"] = stdout[-1000:]
+            iteration_result.error = stdout[-1000:]
             print(f"[!] Iterazione {iter_num} - Fallita")
         
-        self.history.append(iteration_data)
-        return iteration_data
+        self.history.append(iteration_result.to_dict())
+        return iteration_result
 
-    async def _run_llm_iteration(self, iter_num: int) -> dict:
+    async def _run_llm_iteration(self, iter_num: int) -> IterationResult:
         if self.business_strategy is None:
             print("[*] Generazione strategia di business con StrategyAgent...")
             strategy_result = await self.strategy_agent.generate_strategy(
@@ -115,40 +123,39 @@ class OrchestratorAgent:
                 self.data_schema,
                 self.data_sample
             )
-            self.business_strategy = strategy_result['business_strategy']
+            self.business_strategy = strategy_result.business_strategy
             print(f"[*] Strategia generata: {self.business_strategy[:100]}...")
         
         with open("evaluation_report.json", "r", encoding="utf-8") as f:
             report = json.load(f)
         
         print(f"[*] Analisi risultati con EvaluatorAgent...")
-        reflection_text = await self.evaluator_agent.evaluate_and_reflect(
+        reflection_result = await self.evaluator_agent.evaluate_and_reflect(
             iter_num,
             report,
             self.glossary
         )
-        safe_to_print = reflection_text.encode('ascii', 'ignore').decode('ascii')
+        safe_to_print = reflection_result.reflection_text.encode('ascii', 'ignore').decode('ascii')
         print(f"\n--- RIFLESSIONE ITERAZIONE {iter_num} ---\n{safe_to_print[:500]}...\n")
         
         last_code = self._load_last_code()
         
         print("[*] Generazione codice con CodeAgent...")
-        new_code = await self.code_agent.generate_code(
+        code_result = await self.code_agent.generate_code(
             self.business_strategy,
-            reflection_text,
+            reflection_result.reflection_text,
             last_code,
             None
         )
         
-        if new_code.strip():
+        if code_result.code.strip():
             with open("dynamic_features.py", "w", encoding="utf-8") as f:
-                f.write(new_code)
+                f.write(code_result.code)
         else:
             print("[!] CodeAgent ha restituito codice vuoto.")
         
-        # Try training with retries (error-fix only, no MLFlow logging)
         retries = 0
-        current_code = new_code
+        current_code = code_result.code
         final_metric = None
         final_error = None
         
@@ -176,27 +183,32 @@ class OrchestratorAgent:
                 print(f"[!] Training fallito. Retry {retries}/{MAX_ERROR_RETRIES} con fix errore...")
                 print(f"[*] Errore: {error_msg[:200]}...")
                 
-                # Error-fix only (no strategy/reflection)
-                current_code = await self.code_agent.fix_code_error(
+                fix_result = await self.code_agent.fix_code_error(
                     error_message=error_msg,
                     previous_code=current_code
                 )
                 
-                if current_code.strip():
+                if fix_result.code.strip():
+                    current_code = fix_result.code
                     with open("dynamic_features.py", "w", encoding="utf-8") as f:
                         f.write(current_code)
                 else:
                     print("[!] CodeAgent ha restituito codice vuoto.")
         
-        iteration_data = {"iteration": iter_num, "metric": final_metric, "error": final_error}
+        iteration_result = IterationResult(
+            iteration=iter_num,
+            metric=final_metric,
+            error=final_error
+        )
         
         if final_metric is not None:
-            self._update_report(iter_num, self.business_strategy, self.history[-1].get('metric'))
+            prev_metric = self.history[-1].get('metric') if self.history else None
+            self._update_report(iter_num, self.business_strategy, prev_metric)
         elif final_error:
             print(f"[!] Iterazione {iter_num} - Fallita")
         
-        self.history.append(iteration_data)
-        return iteration_data
+        self.history.append(iteration_result.to_dict())
+        return iteration_result
 
     def _load_last_code(self) -> str:
         try:
@@ -285,7 +297,7 @@ class OrchestratorAgent:
         for i in range(1, self.max_iterations + 1):
             await self.run_iteration(i)
         
-        valid_runs = [exp for exp in self.history if exp['metric'] is not None]
+        valid_runs = [exp for exp in self.history if exp.get('metric') is not None]
         if valid_runs:
             best_exp = max(valid_runs, key=lambda x: x['metric'])
             print(f"\n[+] Ottimizzazione conclusa. Miglior iterazione: {best_exp['iteration']} (R2: {best_exp['metric']:.4f})")

@@ -2,6 +2,8 @@ import re
 from autogen_agentchat.agents import AssistantAgent
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 
+from dto import CodeGenerationInput, CodeFixInput, CodeOutput
+
 SYSTEM_PROMPT = """Sei un Code Generation Agent specializzato in feature engineering per ML.
 
 REGOLE FONDAMENTALI:
@@ -32,24 +34,31 @@ class CodeAgent:
         reflection_text: str,
         last_code: str,
         last_error: str = None
-    ) -> str:
+    ) -> CodeOutput:
+        validated_input = CodeGenerationInput(
+            business_strategy=business_strategy,
+            reflection_text=reflection_text,
+            last_code=last_code,
+            last_error=last_error
+        )
+        
         prompt = f"""
         Genera il nuovo file `dynamic_features.py`.
         
         # BUSINESS FEATURE STRATEGY (Ancoraggio Top-Down)
-        {business_strategy}
+        {validated_input.business_strategy}
         
         # RIFLESSIONE SUL RUN PRECEDENTE (Ancoraggio Bottom-Up)
-        {reflection_text}
+        {validated_input.reflection_text}
         
         # CODICE PRECEDENTE
-        {last_code}
+        {validated_input.last_code}
         """
         
-        if last_error:
+        if validated_input.last_error:
             prompt += f"""
         ATTENZIONE - CRITICAL FIX REQUIRED: L'esecuzione precedente ha generato questo errore:
-        {last_error}
+        {validated_input.last_error}
         Correggi il codice per gestire questo crash.
         """
         
@@ -67,18 +76,23 @@ class CodeAgent:
         """
         
         response = await self.agent.run(task=prompt)
-        return self._clean_code_output(self._extract_text_from_response(response))
+        code = self._clean_code_output(self._extract_text_from_response(response))
+        return CodeOutput(code=code)
 
-    async def fix_code_error(self, error_message: str, previous_code: str) -> str:
-        """Generate minimal fix for code error without strategy analysis."""
+    async def fix_code_error(self, error_message: str, previous_code: str) -> CodeOutput:
+        validated_input = CodeFixInput(
+            error_message=error_message,
+            previous_code=previous_code
+        )
+        
         prompt = f"""
         Fix ONLY the error in this code. DO NOT change anything else.
         
         ERROR MESSAGE:
-        {error_message}
+        {validated_input.error_message}
         
         PREVIOUS CODE:
-        {previous_code}
+        {validated_input.previous_code}
         
         Rules:
         1. Make minimal changes to fix the error
@@ -90,7 +104,8 @@ class CodeAgent:
         """
         
         response = await self.agent.run(task=prompt)
-        return self._clean_code_output(self._extract_text_from_response(response))
+        code = self._clean_code_output(self._extract_text_from_response(response))
+        return CodeOutput(code=code)
 
     def _extract_text_from_response(self, response) -> str:
         if hasattr(response, 'messages'):
