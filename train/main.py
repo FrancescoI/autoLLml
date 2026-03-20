@@ -47,7 +47,7 @@ def run_training(
     experiment_name: str = None,
     tracking_uri: str = None,
     enable_mlflow: bool = True
-) -> float:
+) -> tuple[float, list[str]]:
     exp_name = setup_mlflow(experiment_name, tracking_uri) if enable_mlflow else None
     
     run_id = None
@@ -87,13 +87,13 @@ def run_training(
         
         corr_dict, top_features = analyze_features(X, y, top_n=10)
         
-        plot_dir = ensure_plot_dir("evaluation_plots")
-        generate_plots(
+        plot_paths = generate_plots(
             X, y,
             top_features["numeric"],
             top_features["categorical"],
             target_col,
-            plot_dir
+            "evaluation_plots",
+            iter_num
         )
         
         training_result = cross_validate(X, y, model, is_classification)
@@ -116,7 +116,11 @@ def run_training(
         log_artifacts()
         
         print(f"SUCCESS_METRIC: {training_result.mean_score:.4f}")
-        return training_result.mean_score
+        
+        import json as json_mod
+        print(f"PLOT_PATHS:{json_mod.dumps(plot_paths)}")
+        
+        return training_result.mean_score, plot_paths
 
 
 def _get_model():

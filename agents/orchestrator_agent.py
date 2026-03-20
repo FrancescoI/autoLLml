@@ -100,11 +100,22 @@ class OrchestratorAgent:
         with open("evaluation_report.json", "r", encoding="utf-8") as f:
             report = json.load(f)
         
+        # Load plot paths for this iteration
+        plot_dir = os.path.join("evaluation_plots", f"iter_{iter_num}")
+        plot_paths = []
+        if os.path.isdir(plot_dir):
+            import glob
+            plot_paths = sorted(glob.glob(os.path.join(plot_dir, "*.png")), key=os.path.getmtime, reverse=True)[:10]
+        
+        feature_importance = report.get("feature_importance", {})
+        
         print(f"[*] Analisi risultati con EvaluatorAgent...")
         reflection_text = await self.evaluator_agent.evaluate_and_reflect(
             iter_num,
             report,
-            self.glossary
+            self.glossary,
+            plot_paths,
+            feature_importance
         )
         safe_to_print = reflection_text.encode('ascii', 'ignore').decode('ascii')
         print(f"\n--- RIFLESSIONE ITERAZIONE {iter_num} ---\n{safe_to_print[:500]}...\n")

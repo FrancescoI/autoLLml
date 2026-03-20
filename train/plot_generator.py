@@ -1,16 +1,33 @@
 import os
+import shutil
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
 
-def ensure_plot_dir(plot_dir: str = "evaluation_plots") -> str:
+def ensure_plot_dir(plot_dir: str = "evaluation_plots", iter_num: int | None = None) -> str:
+    if iter_num is not None:
+        plot_dir = os.path.join(plot_dir, f"iter_{iter_num}")
     os.makedirs(plot_dir, exist_ok=True)
     return plot_dir
 
 
 def _sanitize_filename(name: str) -> str:
     return "".join([c if c.isalnum() else "_" for c in name])
+
+
+def get_latest_plot_paths(base_dir: str = "evaluation_plots", iter_num: int | None = None, max_plots: int = 10) -> list[str]:
+    if iter_num is not None:
+        plot_dir = os.path.join(base_dir, f"iter_{iter_num}")
+    else:
+        plot_dir = base_dir
+    
+    if not os.path.isdir(plot_dir):
+        return []
+    
+    import glob
+    files = sorted(glob.glob(os.path.join(plot_dir, "*.png")), key=os.path.getmtime, reverse=True)
+    return files[:max_plots]
 
 
 def plot_numeric_features(
@@ -104,9 +121,10 @@ def generate_plots(
     top_numeric: list[tuple[str, float]],
     top_categoric: list[tuple[str, float]],
     target_col: str,
-    plot_dir: str = "evaluation_plots"
+    plot_dir: str = "evaluation_plots",
+    iter_num: int | None = None
 ) -> list[str]:
-    ensure_plot_dir(plot_dir)
+    plot_dir = ensure_plot_dir(plot_dir, iter_num)
     
     print(f"[*] Generando {len(top_numeric)} plot numerici e {len(top_categoric)} plot categorici...")
     

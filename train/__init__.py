@@ -16,6 +16,7 @@ from .feature_analyzer import (
 from .plot_generator import (
     ensure_plot_dir,
     generate_plots,
+    get_latest_plot_paths,
 )
 
 from .trainer import (
@@ -45,6 +46,7 @@ __all__ = [
     "select_top_features",
     "ensure_plot_dir",
     "generate_plots",
+    "get_latest_plot_paths",
     "TrainingResult",
     "cross_validate",
     "EvaluationReport",

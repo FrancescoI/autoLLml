@@ -27,7 +27,15 @@ def get_business_strategy_prompt(glossary: str, data_schema: str, data_sample: s
         - "model selection": Stringa con 2 o 3 modelli di machine learning adatti al problema, con una breve motivazione per ciascuno.
 """
 
-def get_reflection_prompt(iter_num: int, evaluation_report: str, glossary: str) -> str:
+def get_reflection_prompt(iter_num: int, evaluation_report: str, glossary: str, feature_importance: str | None = None) -> str:
+    fi_section = f"""
+        # FEATURE IMPORTANCE (dal modello)
+        {feature_importance}
+        
+        Analizza l'importanza delle feature per capire quali variabili il modello considera più utili per la predizione.
+        Confronta l'importanza del modello con le correlazioni: una feature con alta correlazione ma bassa importanza potrebbe essere ridondante.
+    """ if feature_importance else ""
+    
     return f"""
         Analizza i risultati dell'Iterazione {iter_num}:
         
@@ -37,14 +45,29 @@ def get_reflection_prompt(iter_num: int, evaluation_report: str, glossary: str) 
         # GLOSSARIO
         {glossary}
         
-        # GRAFICI ALLEGATI
-        Sono allegati dei boxplot che mostrano la distribuzione delle feature più correlate con la variabile target (Pearson correlation).
-        Per ogni boxplot: l'asse X rappresenta le classi del target, l'asse Y la distribuzione dei valori della feature.
-        Usa questi grafici per:
-        - Identificare feature con separazione netta tra le classi del target (alto potere discriminante)
-        - Rilevare distribuzioni con outlier o sovrapposizioni che suggeriscano interazioni non catturate
-        - Valutare se feature con alta correlazione mostrano anche alta separabilità visiva, o se è solo rumore lineare
-
+        # IMMAGINI ALLEGATE
+        Sono allegate immagini che mostrano le distribuzioni delle feature (fino a 10):
+        
+        VIOLIN PLOTS (feature numeriche):
+        - Ogni violino rappresenta la distribuzione per classe target (0/1)
+        - Asse X: classe del target
+        - Asse Y: valori normalizzati della feature
+        - Cerca: SEPARAZIONE NETTA tra i due violini = alto potere discriminante
+        - Attenzione a: SOVRAPPOSIZIONE = feature rumorosa, OUTLIER = possibile data leakage
+        
+        BAR CHARTS (feature categoriche):
+        - Mostra il tasso di default per ogni categoria
+        - Cerca: GRADIENTE MONOTONO (crescente/decrescente) = pattern di business chiaro
+        - Cerca: DIFFERENZE SIGNIFICATIVE tra categorie = discriminazione forte
+        - Attenzione a: categorie con POCHI CAMPIONI (n<30) = stime instabili
+        
+        COMBINED ANALYSIS:
+        1. Confronta i grafici con la feature_importance: le feature visivamente buone sono anche importanti per il modello?
+        2. I pattern che vedi nei grafici confermano o smentiscono le correlazioni calcolate?
+        3. Gli outlier visibili nei grafici spiegano anomalie nelle metriche del modello?
+        
+        {fi_section}
+        
         # TASK:
         Rifletti in maniera approfondita sulla run precedente, con particolare attenzione alla costruzione di feature derivate e alla scelta del modello di machine learning più opportuno:
         1. Quali feature derivate hanno dimostrato alta importanza prestazionale e qual è la loro logica fenomenologica di dominio? Cosa mostrano i grafici in termini di separabilità tra classi target?
@@ -53,9 +76,9 @@ def get_reflection_prompt(iter_num: int, evaluation_report: str, glossary: str) 
         4. Seleziona un unico modello, lineare o non lineare, sulla base dei risultati del report di valutazione. Scegli tra regressione logistica, eventualmente con penalizzazione L1/L2, Random Forest o BoostedTree.
 
         ATTENZIONE: Non proporre MAI di costruire trasformate elementari (logaritmi, exp, polinomi, ecc.) di feature esistenti. Il focus deve essere al 100% sulla semantica dei dati.
-        ATTENZIONE: Non testare più mode
+        ATTENZIONE: Non testare più modelli
         
-        Rispondi in modo tecnico e analitico (max 400 parole). NON scrivere codice Python.
+        Rispondi in modo tecnico e analitico (max 500 parole). NON scrivere codice Python.
 """
 
 def get_code_generation_prompt(business_strategy: str, reflection_text: str, last_code: str, last_error: str = None) -> str:
