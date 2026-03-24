@@ -69,7 +69,7 @@ python main.py --iterations 10
 ### Training Only (No LLM)
 
 ```bash
-python -m train --iter 1 --no-mlflow
+python -m train --iter 1
 ```
 
 ## Project Structure
@@ -80,9 +80,9 @@ automl/
 ├── agent.py                   # Legacy standalone agent
 ├── utils/                     # Utilities
 │   ├── __init__.py
-│   ├── config.py              # LLM & MLFlow configuration (dataclasses)
+│   ├── config.py              # LLM configuration (dataclasses)
 │   ├── llm_client.py          # OpenAI client wrapper
-│   └── mlflow.py              # MLFlow utilities
+│   └── telemetry.py           # OpenTelemetry telemetry
 ├── prompts/                   # LLM prompt templates
 │   └── __init__.py
 ├── agents/                    # AutoGen agents
@@ -126,10 +126,6 @@ Edit `utils/config.py` to change LLM settings via `LLMConfig` dataclass:
 - Temperature
 - Reasoning effort
 
-MLFlow settings can be customized via `MLFlowConfig` dataclass:
-- Experiment name
-- Tracking URI
-
 Edit `glossary.md` to add domain-specific knowledge about your dataset.
 
 ## Output
@@ -137,39 +133,29 @@ Edit `glossary.md` to add domain-specific knowledge about your dataset.
 - `evaluation_report.json`: Latest evaluation metrics (F1/R2, correlations, feature importance)
 - `evaluation_report.md`: Run history with all iterations
 - `evaluation_plots/`: Feature distribution visualizations
-- `mlruns/`: MLFlow tracking artifacts (kept across resets)
+- `best_run/`: Best model artifacts (local only, not in git)
 
 ## Reproducibility
-
-### MLFlow Tracking
-
-```bash
-# Start MLFlow UI
-mlflow ui --port 5000
-
-# View experiments at http://localhost:5000
-```
 
 ### Save Best Run
 
 ```bash
-python -c "from utils.mlflow import ReproducibleBestModel; ReproducibleBestModel().save()"
+python -c "from best_run import save_best"
 ```
 
 This saves to `best_run/`:
 - `dynamic_features.py` - best feature engineering code
 - `evaluation_report.json` - metrics
-- `best_run_info.json` - MLFlow run info
 
 ### Restore Best Run
 
 ```bash
-python -c "from utils.mlflow import ReproducibleBestModel; ReproducibleBestModel().restore()"
+python -c "from best_run import restore_best"
 ```
 
 ### Reset Codebase
 
-Reset `dynamic_features.py` to baseline for new experimentation (keeps MLFlow runs):
+Reset `dynamic_features.py` to baseline for new experimentation:
 
 ```bash
 python scripts/reset_codebase.py
@@ -182,13 +168,13 @@ python scripts/reset_codebase.py
 python main.py --iterations 5
 
 # 2. Save best run (local only, not in git)
-python -c "from utils.mlflow import ReproducibleBestModel; ReproducibleBestModel().save()"
+python -c "from best_run import save_best"
 
-# 3. Reset codebase for new experiment (MLFlow preserved)
+# 3. Reset codebase for new experiment
 python scripts/reset_codebase.py
 
 # 4. Restore best run when needed
-python -c "from utils.mlflow import ReproducibleBestModel; ReproducibleBestModel().restore()"
+python -c "from best_run import restore_best"
 ```
 
 ## Web UI (Experimental)

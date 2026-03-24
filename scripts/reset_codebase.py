@@ -56,7 +56,7 @@ def get_model():
 
 
 def reset_codebase():
-    """Reset codebase to baseline, keep MLFlow runs."""
+    """Reset codebase to baseline."""
     
     items = [
         "evaluation_report.json",
@@ -74,14 +74,12 @@ def reset_codebase():
                 os.remove(item)
             print(f"[*] Deleted: {item}")
     
-    # Write baseline dynamic_features.py
     output_path = ROOT_DIR / "dynamic_features.py"
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(BASELINE_DYNAMIC_FEATURES)
     print("[*] Reset: dynamic_features.py to baseline (LogisticRegression)")
     
     print("\n[+] Codebase reset complete")
-    print("[*] MLFlow runs preserved in: mlruns/")
     print("[*] To start new experiment: python main.py --iterations 5")
 
 

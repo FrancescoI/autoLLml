@@ -4,8 +4,6 @@ from sklearn.model_selection import KFold
 from sklearn.metrics import r2_score, f1_score, accuracy_score
 from typing import Any
 
-import mlflow
-
 
 class TrainingResult:
     def __init__(
@@ -44,12 +42,9 @@ def cross_validate(
             fold_score = f1_score(y_val, preds, average='weighted')
             fold_acc = accuracy_score(y_val, preds)
             fold_scores.append(fold_score)
-            mlflow.log_metric(f"fold_{fold_idx}_f1", fold_score)
-            mlflow.log_metric(f"fold_{fold_idx}_accuracy", fold_acc)
         else:
             fold_score = r2_score(y_val, preds)
             fold_scores.append(fold_score)
-            mlflow.log_metric(f"fold_{fold_idx}_r2", fold_score)
         
         feature_importances = _aggregate_importance(model, feature_importances)
     

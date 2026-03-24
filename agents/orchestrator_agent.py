@@ -10,27 +10,17 @@ from .strategy_agent import StrategyAgent
 from .code_agent import CodeAgent
 from .evaluator_agent import EvaluatorAgent
 
-import mlflow
-
 MAX_ERROR_RETRIES = 3
 
 class OrchestratorAgent:
     def __init__(
         self,
         model_client: OpenAIChatCompletionClient,
-        max_iterations: int = 5,
-        mlflow_experiment_name: str | None = None,
-        mlflow_tracking_uri: str | None = None
+        max_iterations: int = 5
     ):
         self.max_iterations = max_iterations
         self.history = []
         self.business_strategy: str | None = None
-        self.mlflow_experiment_name = mlflow_experiment_name or "AutoLLml_Experiments"
-        self.mlflow_tracking_uri = mlflow_tracking_uri or os.environ.get("MLFLOW_TRACKING_URI")
-        
-        if self.mlflow_tracking_uri:
-            mlflow.set_tracking_uri(self.mlflow_tracking_uri)
-        mlflow.set_experiment(self.mlflow_experiment_name)
         
         with open("glossary.md", "r", encoding="utf-8") as f:
             self.glossary = f.read()
@@ -49,8 +39,6 @@ class OrchestratorAgent:
         self.evaluator_agent = EvaluatorAgent(model_client)
         
         print("[*] OrchestratorAgent inizializzato")
-        print(f"[*] MLFlow Experiment: {self.mlflow_experiment_name}")
-        print(f"[*] MLFlow Tracking URI: {mlflow.get_tracking_uri()}")
 
     async def run_iteration(self, iter_num: int) -> dict:
         print(f"\n================ AVVIO ITERAZIONE {iter_num} ================")
@@ -64,10 +52,6 @@ class OrchestratorAgent:
         print("[*] Prima run baseline (nessuna chiamata LLM). Esecuzione training loop...")
         
         cmd = ["python", "-m", "train", "--iter", str(iter_num)]
-        if self.mlflow_experiment_name:
-            cmd.extend(["--experiment", self.mlflow_experiment_name])
-        if self.mlflow_tracking_uri:
-            cmd.extend(["--tracking-uri", self.mlflow_tracking_uri])
         
         result = subprocess.run(cmd, capture_output=True, text=True)
         stdout = result.stdout.strip()
@@ -136,7 +120,6 @@ class OrchestratorAgent:
         else:
             print("[!] CodeAgent ha restituito codice vuoto.")
         
-        # Try training with retries (error-fix only, no MLFlow logging)
         retries = 0
         current_code = new_code
         final_metric = None
@@ -145,7 +128,7 @@ class OrchestratorAgent:
         while retries < MAX_ERROR_RETRIES:
             print(f"[*] Esecuzione training loop... (attempt {retries + 1})")
             
-            cmd = ["python", "-m", "train", "--iter", str(iter_num), "--no-mlflow"]
+            cmd = ["python", "-m", "train", "--iter", str(iter_num)]
             result = subprocess.run(cmd, capture_output=True, text=True)
             stdout = result.stdout.strip()
             

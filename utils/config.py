@@ -36,16 +36,7 @@ class LLMConfig:
         }
 
 
-@dataclass
-class MLFlowConfig:
-    experiment_name: str = field(
-        default_factory=lambda: os.environ.get("MLFLOW_EXPERIMENT_NAME", "AutoLLml_Experiments")
-    )
-    tracking_uri: str = field(default_factory=lambda: os.environ.get("MLFLOW_TRACKING_URI"))
-
-
 llm_config = LLMConfig()
-mlflow_config = MLFlowConfig()
 
 llm_client = llm_config.create_client()
 

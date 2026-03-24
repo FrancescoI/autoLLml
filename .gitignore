@@ -8,8 +8,6 @@ build/
 .eggs/
 
 .env
-mlruns/
-mlflow.db
 *.db
 evaluation_plots/
 evaluation_report.json
