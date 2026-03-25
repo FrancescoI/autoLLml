@@ -12,6 +12,7 @@ AutoLLml uses GPT-5 to generate business-aware derived features and optimize ML 
 - **Iterative Improvement**: LLM analyzes previous results + plots to generate better features each round
 - **Multi-Modal Analysis**: Uses GPT-5 Vision to analyze feature distribution plots
 - **Automatic Pruning**: Removes noisy/redundant features
+- **Feature Selection Testing**: Dataset includes noise features to test pruning capabilities
 - **Error Recovery**: If code crashes, LLM receives error message to fix in next iteration
 
 ## Architecture
@@ -32,6 +33,14 @@ Built with **Microsoft Agent Framework (AutoGen)**, featuring a multi-agent syst
 │business       │ │feature        │ │results and    │
 │strategy       │ │engineering    │ │reflects       │
 │               │ │code           │ │               │
+└───────────────┘ └───────────────┘ └───────────────┘
+        │                 │                 │
+        ▼                 ▼                 ▼
+┌───────────────┐ ┌───────────────┐ ┌───────────────┐
+│ MemoryAgent   │ │ModelSelector │ │ PruningAgent  │
+│Maintains      │ │Recommends    │ │Identifies     │
+│conversation   │ │optimal ML    │ │removes noisy  │
+│history        │ │model         │ │features       │
 └───────────────┘ └───────────────┘ └───────────────┘
 ```
 
@@ -91,7 +100,9 @@ automl/
 │   ├── code_agent.py           # Feature engineering code
 │   ├── evaluator_agent.py      # Results analysis
 │   ├── orchestrator_agent.py   # Workflow coordinator
-│   └── workflow.py            # AutoGen workflow orchestration
+│   ├── memory_agent.py         # Conversation history management
+│   ├── model_selector_agent.py # ML model recommendation
+│   └── pruning_agent.py        # Feature pruning logic
 ├── train/                     # Training pipeline (modular)
 │   ├── __init__.py
 │   ├── __main__.py            # Module entry point
@@ -106,6 +117,7 @@ automl/
 │   └── reset_codebase.py       # Reset to baseline
 ├── dynamic_features.py         # Generated feature engineering (overwritten each iteration)
 ├── glossary.md               # Data dictionary & domain knowledge
+├── best_run.py               # Best run save/restore utility
 └── data/
     └── dataset.csv              # Input dataset
 ```
@@ -117,7 +129,8 @@ automl/
 3. **Training & Evaluation**: Train pipeline runs 5-fold cross-validation and generates distribution plots
 4. **Reflection**: EvaluatorAgent analyzes results and plots to provide insights
 5. **Code Generation**: CodeAgent generates new feature engineering code based on strategy + reflection
-6. **Iteration**: Process repeats up to max_iterations
+6. **Feature Selection**: PruningAgent identifies and removes noisy/redundant features
+7. **Iteration**: Process repeats up to max_iterations
 
 ## Configuration
 
