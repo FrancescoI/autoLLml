@@ -1,0 +1,20 @@
+llm:
+  model: "gpt-5.4-mini-2026-03-17"
+  temperature: 0.7
+  reasoning_effort: "medium"
+
+training:
+  cv_folds: 5
+  cv_random_state: 42
+
+paths:
+  data: "data/dataset.csv"
+  glossary: "glossary.md"
+  memory: "memory.json"
+  evaluation_report: "evaluation_report.json"
+  evaluation_report_md: "evaluation_report.md"
+  output_dir: "evaluation_plots"
+
+agent:
+  max_iterations: 5
+  max_error_retries: 3

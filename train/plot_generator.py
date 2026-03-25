@@ -4,8 +4,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
+from utils.config import get_paths
 
-def ensure_plot_dir(plot_dir: str = "evaluation_plots", iter_num: int | None = None) -> str:
+
+def ensure_plot_dir(plot_dir: str | None = None, iter_num: int | None = None) -> str:
+    if plot_dir is None:
+        plot_dir = get_paths().output_dir
     if iter_num is not None:
         plot_dir = os.path.join(plot_dir, f"iter_{iter_num}")
     os.makedirs(plot_dir, exist_ok=True)
@@ -16,7 +20,9 @@ def _sanitize_filename(name: str) -> str:
     return "".join([c if c.isalnum() else "_" for c in name])
 
 
-def get_latest_plot_paths(base_dir: str = "evaluation_plots", iter_num: int | None = None, max_plots: int = 10) -> list[str]:
+def get_latest_plot_paths(base_dir: str | None = None, iter_num: int | None = None, max_plots: int = 10) -> list[str]:
+    if base_dir is None:
+        base_dir = get_paths().output_dir
     if iter_num is not None:
         plot_dir = os.path.join(base_dir, f"iter_{iter_num}")
     else:
@@ -121,7 +127,7 @@ def generate_plots(
     top_numeric: list[tuple[str, float]],
     top_categoric: list[tuple[str, float]],
     target_col: str,
-    plot_dir: str = "evaluation_plots",
+    plot_dir: str | None = None,
     iter_num: int | None = None
 ) -> list[str]:
     plot_dir = ensure_plot_dir(plot_dir, iter_num)

@@ -3,13 +3,13 @@ import os
 from datetime import datetime
 from typing import Any
 
-
-MEMORY_FILE = "memory.json"
+from utils.config import get_paths
 
 
 class MemoryAgent:
     def __init__(self):
-        self.memory_file = MEMORY_FILE
+        paths = get_paths()
+        self.memory_file = paths.memory
         self._load_memory()
 
     def _load_memory(self):

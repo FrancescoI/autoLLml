@@ -12,29 +12,34 @@ from .evaluator_agent import EvaluatorAgent
 from .memory_agent import MemoryAgent
 from .model_selector_agent import ModelSelectorAgent
 from .pruning_agent import PruningAgent
+from utils.config import get_paths, get_agent_config
 
-MAX_ERROR_RETRIES = 3
 
 class OrchestratorAgent:
     def __init__(
         self,
         model_client: OpenAIChatCompletionClient,
-        max_iterations: int = 5
+        max_iterations: int | None = None
     ):
-        self.max_iterations = max_iterations
+        paths = get_paths()
+        agent_config = get_agent_config()
+        
+        self.paths = paths
+        self.max_iterations = max_iterations if max_iterations is not None else agent_config.max_iterations
+        self.max_error_retries = agent_config.max_error_retries
         self.history = []
         self.business_strategy: str | None = None
         self.current_model: str | None = None
         
-        with open("glossary.md", "r", encoding="utf-8") as f:
+        with open(paths.glossary, "r", encoding="utf-8") as f:
             self.glossary = f.read()
         
         try:
-            df = pd.read_csv("data/dataset.csv", encoding="latin-1")
+            df = pd.read_csv(paths.data, encoding="latin-1")
             self.data_schema = str(df.dtypes.to_dict())
             self.data_sample = str(df.head(1).to_dict())
         except FileNotFoundError:
-            print("[!] Assicurati di inserire il file in data/dataset.csv prima di avviare.")
+            print(f"[!] Assicurati di inserire il file in {paths.data} prima di avviare.")
             self.data_schema = "Dati non caricati."
             self.data_sample = "N/A"
         
@@ -104,10 +109,10 @@ class OrchestratorAgent:
             if new_feature_ideas:
                 print(f"[*] Nuove idee feature: {new_feature_ideas}")
         
-        with open("evaluation_report.json", "r", encoding="utf-8") as f:
+        with open(self.paths.evaluation_report, "r", encoding="utf-8") as f:
             report = json.load(f)
         
-        plot_dir = os.path.join("evaluation_plots", f"iter_{iter_num}")
+        plot_dir = os.path.join(self.paths.output_dir, f"iter_{iter_num}")
         plot_paths = []
         if os.path.isdir(plot_dir):
             import glob
@@ -169,7 +174,7 @@ class OrchestratorAgent:
         final_metric = None
         final_error = None
         
-        while retries < MAX_ERROR_RETRIES:
+        while retries < self.max_error_retries:
             print(f"[*] Esecuzione training loop... (attempt {retries + 1})")
             
             cmd = ["python", "-m", "train", "--iter", str(iter_num)]
@@ -184,13 +189,13 @@ class OrchestratorAgent:
                 break
             else:
                 retries += 1
-                if retries >= MAX_ERROR_RETRIES:
+                if retries >= self.max_error_retries:
                     final_error = stdout[-1000:]
-                    print(f"[!] Training fallito dopo {MAX_ERROR_RETRIES} tentativi")
+                    print(f"[!] Training fallito dopo {self.max_error_retries} tentativi")
                     break
                 
                 error_msg = stdout[-1000:]
-                print(f"[!] Training fallito. Retry {retries}/{MAX_ERROR_RETRIES} con fix errore...")
+                print(f"[!] Training fallito. Retry {retries}/{self.max_error_retries} con fix errore...")
                 print(f"[*] Errore: {error_msg[:200]}...")
                 
                 current_code = await self.code_agent.fix_code_error(
@@ -264,11 +269,11 @@ class OrchestratorAgent:
         business_strategy: str | None,
         prev_metric: float | None
     ):
-        md_path = "evaluation_report.md"
+        md_path = self.paths.evaluation_report_md
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         try:
-            with open("evaluation_report.json", "r", encoding="utf-8") as f:
+            with open(self.paths.evaluation_report, "r", encoding="utf-8") as f:
                 report = json.load(f)
         except Exception:
             return
@@ -277,6 +282,9 @@ class OrchestratorAgent:
         metric_name = report.get("metric_name", "score")
         score_mean = report.get("score_mean", float("nan"))
         score_std = report.get("score_std", float("nan"))
+        precision = report.get("precision")
+        recall = report.get("recall")
+        auc_roc = report.get("auc_roc")
         n_feat = report.get("num_features", "?")
         
         if prev_metric is not None:
@@ -296,6 +304,14 @@ class OrchestratorAgent:
         
         strat_md = business_strategy.strip() if business_strategy else "*(non generata — run baseline)*"
         
+        extra_metrics = ""
+        if precision is not None:
+            extra_metrics += f"| Precision (CV-5) | {precision:.4f} |\n"
+        if recall is not None:
+            extra_metrics += f"| Recall (CV-5) | {recall:.4f} |\n"
+        if auc_roc is not None:
+            extra_metrics += f"| AUC-ROC (CV-5) | {auc_roc:.4f} |\n"
+        
         section = (
             f"\n---\n"
             f"## Run {iter_num}  —  {timestamp}\n\n"
@@ -304,6 +320,7 @@ class OrchestratorAgent:
             f"|---------|--------|\n"
             f"| Task Type | {task_type.upper()} |\n"
             f"| {metric_name} Mean (CV-5) | **{score_mean:.4f}** ± {score_std:.4f} |\n"
+            f"{extra_metrics}"
             f"| Δ vs run precedente | {delta_str} |\n"
             f"| Numero feature in input | {n_feat} |\n\n"
             f"### Top correlazioni con il target (Pearson)\n{corr_md}\n\n"

@@ -21,6 +21,8 @@ from .reporter import (
     log_artifacts,
 )
 
+from utils.config import get_paths
+
 
 def run_training(iter_num: int) -> tuple[float, list[str]]:
     df = load_dataset()
@@ -39,12 +41,13 @@ def run_training(iter_num: int) -> tuple[float, list[str]]:
     
     corr_dict, top_features = analyze_features(X, y, top_n=10)
     
+    paths = get_paths()
     plot_paths = generate_plots(
         X, y,
         top_features["numeric"],
         top_features["categorical"],
         target_col,
-        "evaluation_plots",
+        paths.output_dir,
         iter_num
     )
     
@@ -58,6 +61,9 @@ def run_training(iter_num: int) -> tuple[float, list[str]]:
         "metric_name": metric_name,
         "score_mean": training_result.mean_score,
         "score_std": training_result.std_score,
+        "precision": training_result.precision,
+        "recall": training_result.recall,
+        "auc_roc": training_result.auc_roc,
         "num_features": len(X.columns),
         "top_correlations_with_target": dict(top_features["numeric"]),
         "feature_importance": training_result.feature_importance or {},
@@ -81,7 +87,8 @@ def _get_model():
 
 def _save_report(report_data: dict) -> None:
     import json
-    with open("evaluation_report.json", "w") as f:
+    paths = get_paths()
+    with open(paths.evaluation_report, "w") as f:
         json.dump(report_data, f, indent=2)
 
 

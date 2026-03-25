@@ -193,7 +193,10 @@ def get_code_generation_prompt(business_strategy: str, reflection_text: str, las
         REGOLE FONDAMENTALI:
         1. Esegui pruning delle feature irrilevanti individuate nella riflessione.
         2. Gestisci sempre i missing value in ottica di best practice (es. mediana per cont, 'Unknown' per cat, o imputation condizionata).
-        3. Codifica le variabili categoriche adeguatamente.
+        3. Codifica le variabili categoriche IN MODO INTELLIGENTE in base al modello:
+           - Per modelli tree-based (RandomForest, HistGradientBoostingClassifier, GradientBoosting, XGBoost, LightGBM, ExtraTrees): NON usare OneHotEncoder! Usa OrdinalEncoder (codifica intera) oppure per HistGradientBoostingClassifier usa il parametro categorical_features e passa le categoriche direttamente senza alcuna codifica.
+           - Per modelli lineari (LogisticRegression, LinearRegression, Ridge, Lasso): usa OneHotEncoder.
+           - NON usare mai LabelEncoder (non supporta unknown values).
         4. COSTRUISCI FEATURE DERIVATE CHE RIFLETTONO I FENOMENI DI BUSINESS discusso nella riflessione.
         5. TASSATIVO: NON COSTRUIRE MAI trasformate elementari di singole feature esistenti (assolutamente NO a `np.log`, polinomi al quadrato o radici quadrate). Tutte le tue feature aggiunte devono fondere più colonne o applicare vere logiche operative.
         6. Scegli il modello di machine learning più adatto al problema.

@@ -62,6 +62,8 @@ def reset_codebase():
         "evaluation_report.json",
         "evaluation_report.md",
         "evaluation_plots",
+        "traces.jsonl",
+        "memory.json",
         "__pycache__",
         "agents/__pycache__",
     ]

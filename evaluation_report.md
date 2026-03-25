@@ -3,21 +3,27 @@
 > Generato automaticamente dall'OrchestratorAgent con Microsoft Agent Framework.
 
 ---
-## Run 1  —  2026-03-19 17:38:32
+## Run 1  —  2026-03-25 16:21:02
 
 ### Metriche
 | Metrica | Valore |
 |---------|--------|
 | Task Type | CLASSIFICATION |
-| F1_weighted Mean (CV-5) | **0.8483** ± 0.0096 |
+| F1_weighted Mean (CV-5) | **0.7556** ± 0.0098 |
+| Precision (CV-5) | 0.7570 |
+| Recall (CV-5) | 0.7608 |
+| AUC-ROC (CV-5) | 0.8413 |
 | Δ vs run precedente | — (baseline) |
-| Numero feature in input | 5 |
+| Numero feature in input | 10 |
 
 ### Top correlazioni con il target (Pearson)
-  - `delinquency_30d_freq`: +0.5113
-  - `tot_outstanding_debt`: +0.5097
-  - `credit_lines_count`: +0.3699
-  - `annual_income`: +0.2177
+  - `tot_outstanding_debt`: +0.3847
+  - `annual_income`: -0.3272
+  - `credit_lines_count`: +0.0524
+  - `customer_tenure_months`: +0.0242
+  - `delinquency_30d_freq`: +0.0221
+  - `marketing_email_opens`: -0.0080
+  - `support_tickets_count`: +0.0045
 
 ### Feature importance (top 10)
   *(non disponibile)*
@@ -29,25 +35,70 @@
 *(non generata — run baseline)*
 
 ---
-## Run 2  —  2026-03-19 17:40:47
+## Run 2  —  2026-03-25 16:23:27
 
 ### Metriche
 | Metrica | Valore |
 |---------|--------|
 | Task Type | CLASSIFICATION |
-| F1_weighted Mean (CV-5) | **0.8446** ± 0.0068 |
-| Δ vs run precedente | -0.0037  ▼ |
-| Numero feature in input | 17 |
+| F1_weighted Mean (CV-5) | **0.7663** ± 0.0034 |
+| Precision (CV-5) | 0.7735 |
+| Recall (CV-5) | 0.7637 |
+| AUC-ROC (CV-5) | 0.8496 |
+| Δ vs run precedente | +0.0107  ▲ |
+| Numero feature in input | 25 |
 
 ### Top correlazioni con il target (Pearson)
-  - `ratio_outstanding_to_income`: +0.5925
-  - `debt_high`: +0.5542
-  - `debt_high_and_delinquent`: +0.5286
-  - `delinquency_30d_freq`: +0.5113
-  - `credit_utilization_style`: +0.4754
-  - `delinquency_x_debt_to_income`: +0.4607
-  - `many_lines_and_delinquency`: +0.4599
-  - `delinquency_flag`: +0.4397
+  - `debt_capacity_gap`: +0.4944
+  - `debt_burden_ratio`: +0.4188
+  - `tot_outstanding_debt`: +0.3847
+  - `active_line_delinquency_burden`: +0.3778
+  - `debt_pressure_index`: +0.3595
+  - `annual_income`: -0.3272
+  - `credit_stress_index`: +0.0335
+  - `delinquency_30d_freq`: +0.0221
+
+### Feature importance (top 10)
+  - `num__debt_burden_ratio`: 0.1857
+  - `num__debt_capacity_gap`: 0.1593
+  - `num__debt_pressure_index`: 0.1315
+  - `num__tot_outstanding_debt`: 0.0722
+  - `num__active_line_delinquency_burden`: 0.0669
+  - `num__annual_income`: 0.0587
+  - `num__recent_customer_service_load`: 0.0357
+  - `cat__account_manager_id`: 0.0354
+  - `num__service_intensity_per_tenure`: 0.0340
+  - `num__tenure_adjusted_relationship_frict`: 0.0305
+
+### Feature implementate in questa run
+  *(baseline)*
+
+### Business strategy applicata
+1) Rischio di sovraindebitamento: costruire un indice di leva finanziaria combinando tot_outstanding_debt con annual_income per rappresentare quanto il cliente è esposto rispetto alla propria capacità reddituale; questo cattura la sostenibilità del debito, uno dei driver più forti del default. 2) Pressione creditizia e fragilità di comportamento: incrociare delinquency_30d_freq con credit_lines_count per distinguere clienti con molte linee attive ma già segnali di ritardo, evidenziando una possibile gestione stressata del credito. 3) Vitalità della relazione cliente-banca: aggregare customer_tenure_months, support_tickets_count e marketing_email_opens in un indicatore di engagement/attrito, dove molti ticket e poche aperture email su lunga anzianità possono segnalare deterioramento della relazione o minor attenzione alle comunicazioni. 4) Rischio contestuale per segmento operativo: creare feature di cross tra industry_sector e variabili finanziarie/comportamentali per catturare differenze strutturali tra settori (es. settori più ciclici con stessa leva possono avere rischio diverso), e analogamente tra branch_code/account_manager_id e segnali di morosità per intercettare effetti di filiale o di gestione del portafoglio. 5) Intensità di servizio rispetto alla maturità del cliente: combinare support_tickets_count e marketing_email_opens con customer_tenure_months per misurare se un cliente recente o storico mostra un livello di interazione anomalo rispetto al ciclo di vita, utile come segnale indiretto di frizione, difficoltà operative o scarso coinvolgimento.
+
+---
+## Run 3  —  2026-03-25 16:24:23
+
+### Metriche
+| Metrica | Valore |
+|---------|--------|
+| Task Type | CLASSIFICATION |
+| F1_weighted Mean (CV-5) | **0.7598** ± 0.0043 |
+| Precision (CV-5) | 0.7633 |
+| Recall (CV-5) | 0.7580 |
+| AUC-ROC (CV-5) | 0.8440 |
+| Δ vs run precedente | -0.0065  ▼ |
+| Numero feature in input | 25 |
+
+### Top correlazioni con il target (Pearson)
+  - `debt_capacity_gap`: +0.4944
+  - `debt_burden_ratio`: +0.4188
+  - `tot_outstanding_debt`: +0.3847
+  - `active_line_delinquency_burden`: +0.3778
+  - `debt_pressure_index`: +0.3595
+  - `annual_income`: -0.3272
+  - `credit_stress_index`: +0.0335
+  - `delinquency_30d_freq`: +0.0221
 
 ### Feature importance (top 10)
   *(non disponibile)*
@@ -56,32 +107,31 @@
   *(baseline)*
 
 ### Business strategy applicata
-1) Costruisci indicatori di “capacità di rimborso” e “carico debito”: ratio_outstanding_to_income = tot_outstanding_debt / annual_income e bucket/carico (es. alto/medio/basso). Utile per distinguere clienti con lo stesso debito ma capacità di reddito diversa.
-2) Feature crossing tra rischio storico e esposizione: delinquency_30d_freq x (tot_outstanding_debt / annual_income) per catturare casi in cui la morosità recente è amplificata da un carico debito elevato; includere anche un crossing discreto del tipo delinquency_flag (delinquency_30d_freq>0) + credit_lines_count (es. “molte linee + delinquency”).
-3) Normalizza la complessità del portafoglio crediti: debt_per_credit_line = tot_outstanding_debt / credit_lines_count e credit_utilization_style = delinquency_30d_freq * credit_lines_count. Queste combinazioni riflettono intensità di esposizione per linea e possibile stress operativo.
-4) Segmentazione tariffaria/decisionale per settore con aggregazioni target-agnostiche: creare un “sector_risk_index” basato su aggregazioni robusthe per industry_sector (es. media predittiva out-of-fold o median default rate per settore, con smoothing). Usarla come input per modelli e come regola business per pricing/limit policy.
-5) Soglie business-driven su combinazioni: create feature di soglia (es. annual_income_low, debt_high) e crossing con delinquency (annual_income_low & delinquency>0; debt_high & delinquency>0). Consentono campagne di underwriting mirate (es. revisione manuale o riduzione fido) sui segmenti ad alto rischio.
+L’iterazione migliore con Random Forest indica che il problema beneficia di interazioni non lineari e di segmentazione del rischio, più che di relazioni puramente lineari. La strategia aggiornata deve quindi rafforzare tre assi: 1) leva finanziaria e capacità di rimborso, costruendo segnali che combinano debito, reddito e intensità delle linee di credito per distinguere clienti semplicemente indebitati da clienti realmente sotto stress; 2) deterioramento comportamentale e relazione con la banca, integrando morosità, ticket di supporto e tenure per intercettare clienti che mostrano frizione operativa o preavvisi di default; 3) rischio contestuale di segmento, sfruttando industria, filiale e account manager per catturare differenze di portafoglio, policy o qualità del servicing. In ottica di multicollinearità, conviene preferire feature composite semanticamente robuste invece di molte variabili finanziarie ridondanti. Il modello best-fit rimane un ensemble ad albero, in particolare Random Forest o boosted tree, perché riescono a modellare soglie e interazioni tra rischio finanziario, comportamento e contesto commerciale.
 
 ---
-## Run 3  —  2026-03-19 17:41:38
+## Run 4  —  2026-03-25 16:25:17
 
 ### Metriche
 | Metrica | Valore |
 |---------|--------|
 | Task Type | CLASSIFICATION |
-| F1_weighted Mean (CV-5) | **0.8446** ± 0.0068 |
+| F1_weighted Mean (CV-5) | **0.7598** ± 0.0043 |
+| Precision (CV-5) | 0.7633 |
+| Recall (CV-5) | 0.7580 |
+| AUC-ROC (CV-5) | 0.8440 |
 | Δ vs run precedente | +0.0000  ▲ |
-| Numero feature in input | 17 |
+| Numero feature in input | 25 |
 
 ### Top correlazioni con il target (Pearson)
-  - `ratio_outstanding_to_income`: +0.5925
-  - `debt_high`: +0.5542
-  - `debt_high_and_delinquent`: +0.5286
-  - `delinquency_30d_freq`: +0.5113
-  - `credit_utilization_style`: +0.4754
-  - `delinquency_x_debt_to_income`: +0.4607
-  - `many_lines_and_delinquency`: +0.4599
-  - `delinquency_flag`: +0.4397
+  - `debt_capacity_gap`: +0.4944
+  - `debt_burden_ratio`: +0.4188
+  - `tot_outstanding_debt`: +0.3847
+  - `active_line_delinquency_burden`: +0.3778
+  - `debt_pressure_index`: +0.3595
+  - `annual_income`: -0.3272
+  - `credit_stress_index`: +0.0335
+  - `delinquency_30d_freq`: +0.0221
 
 ### Feature importance (top 10)
   *(non disponibile)*
@@ -90,32 +140,31 @@
   *(baseline)*
 
 ### Business strategy applicata
-1) Costruisci indicatori di “capacità di rimborso” e “carico debito”: ratio_outstanding_to_income = tot_outstanding_debt / annual_income e bucket/carico (es. alto/medio/basso). Utile per distinguere clienti con lo stesso debito ma capacità di reddito diversa.
-2) Feature crossing tra rischio storico e esposizione: delinquency_30d_freq x (tot_outstanding_debt / annual_income) per catturare casi in cui la morosità recente è amplificata da un carico debito elevato; includere anche un crossing discreto del tipo delinquency_flag (delinquency_30d_freq>0) + credit_lines_count (es. “molte linee + delinquency”).
-3) Normalizza la complessità del portafoglio crediti: debt_per_credit_line = tot_outstanding_debt / credit_lines_count e credit_utilization_style = delinquency_30d_freq * credit_lines_count. Queste combinazioni riflettono intensità di esposizione per linea e possibile stress operativo.
-4) Segmentazione tariffaria/decisionale per settore con aggregazioni target-agnostiche: creare un “sector_risk_index” basato su aggregazioni robusthe per industry_sector (es. media predittiva out-of-fold o median default rate per settore, con smoothing). Usarla come input per modelli e come regola business per pricing/limit policy.
-5) Soglie business-driven su combinazioni: create feature di soglia (es. annual_income_low, debt_high) e crossing con delinquency (annual_income_low & delinquency>0; debt_high & delinquency>0). Consentono campagne di underwriting mirate (es. revisione manuale o riduzione fido) sui segmenti ad alto rischio.
+Le iterazioni mostrano che le feature legate al peso del debito e alla pressione sulle linee attive sono le più informative, ma l’ultima configurazione ha perso performance perché ha probabilmente introdotto segnali troppo sovrapposti e poco diversificati. La strategia aggiornata deve quindi mantenere il focus sulla vulnerabilità finanziaria, ma arricchirlo con due dimensioni più distintive: 1) sostenibilità del debito nel tempo, combinando debito, reddito e tenure per distinguere un indebitamento fisiologico da uno strutturalmente rischioso; 2) qualità del comportamento creditizio, integrando morosità con l’ampiezza dell’esposizione per misurare la pressione reale sulle linee attive; 3) stato della relazione cliente-banca, usando supporto e marketing come segnali di frizione, disengagement o difficoltà operative; 4) segmentazione contestuale per settore/filiale/manager per intercettare effetti di portafoglio e qualità del servicing. In sintesi, conviene passare da soli ratio di debito a indicatori compositi che riflettano rischio finanziario + maturità della relazione + contesto operativo, riducendo ridondanza tra variabili strettamente collegate.
 
 ---
-## Run 4  —  2026-03-19 17:42:25
+## Run 5  —  2026-03-25 16:26:09
 
 ### Metriche
 | Metrica | Valore |
 |---------|--------|
 | Task Type | CLASSIFICATION |
-| F1_weighted Mean (CV-5) | **0.8446** ± 0.0068 |
+| F1_weighted Mean (CV-5) | **0.7598** ± 0.0043 |
+| Precision (CV-5) | 0.7633 |
+| Recall (CV-5) | 0.7580 |
+| AUC-ROC (CV-5) | 0.8440 |
 | Δ vs run precedente | +0.0000  ▲ |
-| Numero feature in input | 17 |
+| Numero feature in input | 25 |
 
 ### Top correlazioni con il target (Pearson)
-  - `ratio_outstanding_to_income`: +0.5925
-  - `debt_high`: +0.5542
-  - `debt_high_and_delinquent`: +0.5286
-  - `delinquency_30d_freq`: +0.5113
-  - `credit_utilization_style`: +0.4754
-  - `delinquency_x_debt_to_income`: +0.4607
-  - `many_lines_and_delinquency`: +0.4599
-  - `delinquency_flag`: +0.4397
+  - `debt_capacity_gap`: +0.4944
+  - `debt_burden_ratio`: +0.4188
+  - `tot_outstanding_debt`: +0.3847
+  - `active_line_delinquency_burden`: +0.3778
+  - `debt_pressure_index`: +0.3595
+  - `annual_income`: -0.3272
+  - `credit_stress_index`: +0.0335
+  - `delinquency_30d_freq`: +0.0221
 
 ### Feature importance (top 10)
   *(non disponibile)*
@@ -124,97 +173,4 @@
   *(baseline)*
 
 ### Business strategy applicata
-1) Costruisci indicatori di “capacità di rimborso” e “carico debito”: ratio_outstanding_to_income = tot_outstanding_debt / annual_income e bucket/carico (es. alto/medio/basso). Utile per distinguere clienti con lo stesso debito ma capacità di reddito diversa.
-2) Feature crossing tra rischio storico e esposizione: delinquency_30d_freq x (tot_outstanding_debt / annual_income) per catturare casi in cui la morosità recente è amplificata da un carico debito elevato; includere anche un crossing discreto del tipo delinquency_flag (delinquency_30d_freq>0) + credit_lines_count (es. “molte linee + delinquency”).
-3) Normalizza la complessità del portafoglio crediti: debt_per_credit_line = tot_outstanding_debt / credit_lines_count e credit_utilization_style = delinquency_30d_freq * credit_lines_count. Queste combinazioni riflettono intensità di esposizione per linea e possibile stress operativo.
-4) Segmentazione tariffaria/decisionale per settore con aggregazioni target-agnostiche: creare un “sector_risk_index” basato su aggregazioni robusthe per industry_sector (es. media predittiva out-of-fold o median default rate per settore, con smoothing). Usarla come input per modelli e come regola business per pricing/limit policy.
-5) Soglie business-driven su combinazioni: create feature di soglia (es. annual_income_low, debt_high) e crossing con delinquency (annual_income_low & delinquency>0; debt_high & delinquency>0). Consentono campagne di underwriting mirate (es. revisione manuale o riduzione fido) sui segmenti ad alto rischio.
-
----
-## Run 5  —  2026-03-19 17:43:17
-
-### Metriche
-| Metrica | Valore |
-|---------|--------|
-| Task Type | CLASSIFICATION |
-| F1_weighted Mean (CV-5) | **0.8446** ± 0.0068 |
-| Δ vs run precedente | +0.0000  ▲ |
-| Numero feature in input | 17 |
-
-### Top correlazioni con il target (Pearson)
-  - `ratio_outstanding_to_income`: +0.5925
-  - `debt_high`: +0.5542
-  - `debt_high_and_delinquent`: +0.5286
-  - `delinquency_30d_freq`: +0.5113
-  - `credit_utilization_style`: +0.4754
-  - `delinquency_x_debt_to_income`: +0.4607
-  - `many_lines_and_delinquency`: +0.4599
-  - `delinquency_flag`: +0.4397
-
-### Feature importance (top 10)
-  *(non disponibile)*
-
-### Feature implementate in questa run
-  *(baseline)*
-
-### Business strategy applicata
-1) Costruisci indicatori di “capacità di rimborso” e “carico debito”: ratio_outstanding_to_income = tot_outstanding_debt / annual_income e bucket/carico (es. alto/medio/basso). Utile per distinguere clienti con lo stesso debito ma capacità di reddito diversa.
-2) Feature crossing tra rischio storico e esposizione: delinquency_30d_freq x (tot_outstanding_debt / annual_income) per catturare casi in cui la morosità recente è amplificata da un carico debito elevato; includere anche un crossing discreto del tipo delinquency_flag (delinquency_30d_freq>0) + credit_lines_count (es. “molte linee + delinquency”).
-3) Normalizza la complessità del portafoglio crediti: debt_per_credit_line = tot_outstanding_debt / credit_lines_count e credit_utilization_style = delinquency_30d_freq * credit_lines_count. Queste combinazioni riflettono intensità di esposizione per linea e possibile stress operativo.
-4) Segmentazione tariffaria/decisionale per settore con aggregazioni target-agnostiche: creare un “sector_risk_index” basato su aggregazioni robusthe per industry_sector (es. media predittiva out-of-fold o median default rate per settore, con smoothing). Usarla come input per modelli e come regola business per pricing/limit policy.
-5) Soglie business-driven su combinazioni: create feature di soglia (es. annual_income_low, debt_high) e crossing con delinquency (annual_income_low & delinquency>0; debt_high & delinquency>0). Consentono campagne di underwriting mirate (es. revisione manuale o riduzione fido) sui segmenti ad alto rischio.
-
----
-## Run 1  —  2026-03-19 18:05:40
-
-### Metriche
-| Metrica | Valore |
-|---------|--------|
-| Task Type | CLASSIFICATION |
-| F1_weighted Mean (CV-5) | **0.8483** ± 0.0096 |
-| Δ vs run precedente | — (baseline) |
-| Numero feature in input | 5 |
-
-### Top correlazioni con il target (Pearson)
-  - `delinquency_30d_freq`: +0.5113
-  - `tot_outstanding_debt`: +0.5097
-  - `credit_lines_count`: +0.3699
-  - `annual_income`: +0.2177
-
-### Feature importance (top 10)
-  *(non disponibile)*
-
-### Feature implementate in questa run
-  *(baseline)*
-
-### Business strategy applicata
-*(non generata — run baseline)*
-
----
-## Run 2  —  2026-03-19 18:06:48
-
-### Metriche
-| Metrica | Valore |
-|---------|--------|
-| Task Type | CLASSIFICATION |
-| F1_weighted Mean (CV-5) | **0.8452** ± 0.0029 |
-| Δ vs run precedente | -0.0031  ▼ |
-| Numero feature in input | 13 |
-
-### Top correlazioni con il target (Pearson)
-  - `delinquency_30d_freq`: +0.5113
-  - `tot_outstanding_debt`: +0.5097
-  - `delinquency_index`: +0.4754
-  - `delinquency_30d_per_line`: +0.3907
-  - `credit_lines_count`: +0.3699
-  - `annual_income`: +0.2177
-  - `settore_risk_score`: +0.0988
-
-### Feature importance (top 10)
-  *(non disponibile)*
-
-### Feature implementate in questa run
-  *(baseline)*
-
-### Business strategy applicata
-1) Costruire un indicatore di sostenibilità del debito: debt_to_income = tot_outstanding_debt / annual_income (con gestione di divisioni per valori nulli/zero). Business meaning: quanto reddito disponibile viene assorbito dal debito; è un driver diretto della probabilità di default. 2) Misurare la pressione di insolvenza per numero di linee: delinquency_index = delinquency_30d_freq * credit_lines_count (o delinquency_30d_rate_per_line). Business meaning: non solo quanta morosità emerge, ma anche su quante esposizioni/linee si distribuisce il problema. 3) Creare un indicatore “overexposure” verso il settore: settore_risk_score = aggregazione target-encoding cross-validata su industry_sector (media di default per settore calcolata su training fold, con smoothing e gestione categorie rare/Unknown). Business meaning: alcuni settori hanno dinamiche macro/creditizie diverse che influenzano il rischio. 4) Definire una combinazione rischio-coerente tra storico e struttura del credito: delinquency_weighted_debt = (delinquency_30d_freq * tot_outstanding_debt) / max(annual_income, small_value). Business meaning: debito elevato già “stressato” da morosità recente, normalizzato rispetto alla capacità di rimborso. 5) Segmentazione rischio tramite bucket semantici (senza trasformazioni arbitrarie): income_band (bassi/medi/alta capacità) × debt_band (basso/medio/alto indebitamento) come feature categorica derivata. Business meaning: la relazione rischio-reddito e rischio-debito spesso è non lineare a livello di segmenti operativi; i band aiutano i modelli tree-based a catturare policy e regimi di rischio.
+Le iterazioni precedenti indicano che il segnale più forte viene dalla dimensione di pressione finanziaria, in particolare dal debito rapportato alla capacità e dalla morosità sulle linee attive. Tuttavia, le feature già provate risultano molto concentrate sullo stesso fenomeno, quindi la strategia va aggiornata per mantenere il nucleo di rischio creditizio ma aggiungere una lettura più sfumata del ciclo di vita e del comportamento relazionale. In pratica: 1) confermare la centralità dell’indebitamento sostenibile, ma trasformarlo in indicatori che distinguano esposizione assoluta, carico relativo e resilienza nel tempo; 2) arricchire il segnale di morosità con una lettura di “intensità del problema” rispetto alla relazione e al numero di linee, così da separare incidenti occasionali da difficoltà strutturali; 3) introdurre feature di engagement/attrito per catturare clienti che interagiscono poco o hanno bisogno di più supporto, perché questo può anticipare deterioramento; 4) preservare il contesto di filiale, manager e settore solo come layer di segmentazione, non come segnale dominante. La direzione corretta è quindi passare da ratio finanziari isolati a indici compositi di rischio economico, stress operativo e qualità della relazione, mantenendo un modello ad alberi per sfruttare interazioni e soglie.
