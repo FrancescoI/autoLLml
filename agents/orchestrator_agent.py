@@ -9,6 +9,9 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 from .strategy_agent import StrategyAgent
 from .code_agent import CodeAgent
 from .evaluator_agent import EvaluatorAgent
+from .memory_agent import MemoryAgent
+from .model_selector_agent import ModelSelectorAgent
+from .pruning_agent import PruningAgent
 
 MAX_ERROR_RETRIES = 3
 
@@ -21,6 +24,7 @@ class OrchestratorAgent:
         self.max_iterations = max_iterations
         self.history = []
         self.business_strategy: str | None = None
+        self.current_model: str | None = None
         
         with open("glossary.md", "r", encoding="utf-8") as f:
             self.glossary = f.read()
@@ -37,8 +41,11 @@ class OrchestratorAgent:
         self.strategy_agent = StrategyAgent(model_client)
         self.code_agent = CodeAgent(model_client)
         self.evaluator_agent = EvaluatorAgent(model_client)
+        self.memory_agent = MemoryAgent()
+        self.model_selector = ModelSelectorAgent(model_client)
+        self.pruning_agent = PruningAgent(model_client)
         
-        print("[*] OrchestratorAgent inizializzato")
+        print("[*] OrchestratorAgent inizializzato con tutti gli agenti")
 
     async def run_iteration(self, iter_num: int) -> dict:
         print(f"\n================ AVVIO ITERAZIONE {iter_num} ================")
@@ -71,8 +78,10 @@ class OrchestratorAgent:
         return iteration_data
 
     async def _run_llm_iteration(self, iter_num: int) -> dict:
+        memory_context = self.memory_agent.get_context()
+        
         if self.business_strategy is None:
-            print("[*] Generazione strategia di business con StrategyAgent...")
+            print("[*] Generazione strategia iniziale con StrategyAgent...")
             strategy_result = await self.strategy_agent.generate_strategy(
                 self.glossary,
                 self.data_schema,
@@ -80,11 +89,24 @@ class OrchestratorAgent:
             )
             self.business_strategy = strategy_result['business_strategy']
             print(f"[*] Strategia generata: {self.business_strategy[:100]}...")
+        else:
+            print("[*] Riesecuzione strategia con contesto memoria...")
+            last_iter = self.memory_agent.get_last_iteration()
+            strategy_result = await self.strategy_agent.generate_iterative_strategy(
+                self.glossary,
+                self.data_schema,
+                self.data_sample,
+                memory_context,
+                last_iter
+            )
+            self.business_strategy = strategy_result.get('business_strategy', self.business_strategy)
+            new_feature_ideas = strategy_result.get('new_feature_ideas', [])
+            if new_feature_ideas:
+                print(f"[*] Nuove idee feature: {new_feature_ideas}")
         
         with open("evaluation_report.json", "r", encoding="utf-8") as f:
             report = json.load(f)
         
-        # Load plot paths for this iteration
         plot_dir = os.path.join("evaluation_plots", f"iter_{iter_num}")
         plot_paths = []
         if os.path.isdir(plot_dir):
@@ -92,6 +114,28 @@ class OrchestratorAgent:
             plot_paths = sorted(glob.glob(os.path.join(plot_dir, "*.png")), key=os.path.getmtime, reverse=True)[:10]
         
         feature_importance = report.get("feature_importance", {})
+        
+        print("[*] Raccomandazione modello con ModelSelectorAgent...")
+        model_rec = await self.model_selector.recommend_model(
+            data_schema=self.data_schema,
+            data_sample=self.data_sample,
+            glossary=self.glossary,
+            memory_context=memory_context,
+            feature_importance=feature_importance if feature_importance else None
+        )
+        self.current_model = model_rec['recommended_model']
+        print(f"[*] Modello raccomandato: {self.current_model}")
+        
+        print("[*] Analisi pruning con PruningAgent...")
+        correlations = report.get("correlations", {})
+        pruning_result = await self.pruning_agent.analyze_and_prune(
+            feature_importance=feature_importance,
+            correlations=correlations if correlations else None,
+            memory_context=memory_context
+        )
+        features_to_drop = pruning_result.get('features_to_drop', [])
+        if features_to_drop:
+            print(f"[*] Feature da rimuovere: {features_to_drop}")
         
         print(f"[*] Analisi risultati con EvaluatorAgent...")
         reflection_text = await self.evaluator_agent.evaluate_and_reflect(
@@ -149,7 +193,6 @@ class OrchestratorAgent:
                 print(f"[!] Training fallito. Retry {retries}/{MAX_ERROR_RETRIES} con fix errore...")
                 print(f"[*] Errore: {error_msg[:200]}...")
                 
-                # Error-fix only (no strategy/reflection)
                 current_code = await self.code_agent.fix_code_error(
                     error_message=error_msg,
                     previous_code=current_code
@@ -164,12 +207,40 @@ class OrchestratorAgent:
         iteration_data = {"iteration": iter_num, "metric": final_metric, "error": final_error}
         
         if final_metric is not None:
-            self._update_report(iter_num, self.business_strategy, self.history[-1].get('metric'))
+            self._store_in_memory(
+                iteration=iter_num,
+                metric=final_metric,
+                reflection=reflection_text,
+                feature_importance=feature_importance,
+                features_to_drop=features_to_drop
+            )
+            self._update_report(iter_num, self.business_strategy, self.history[-1].get('metric') if self.history else None)
         elif final_error:
             print(f"[!] Iterazione {iter_num} - Fallita")
         
         self.history.append(iteration_data)
         return iteration_data
+
+    def _store_in_memory(
+        self,
+        iteration: int,
+        metric: float,
+        reflection: str,
+        feature_importance: dict,
+        features_to_drop: list[str]
+    ):
+        features_used = self._extract_implemented_features()
+        
+        self.memory_agent.store(
+            iteration=iteration,
+            metric=metric,
+            reflection=reflection,
+            features_used=features_used,
+            model_used=self.current_model or "Unknown",
+            feature_importance=feature_importance,
+            pruning_decisions=features_to_drop
+        )
+        print(f"[*] Dati iterazione {iteration} memorizzati.")
 
     def _load_last_code(self) -> str:
         try:

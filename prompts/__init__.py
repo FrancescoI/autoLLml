@@ -9,6 +9,97 @@ SYSTEM_PROMPT = (
     "4. Niente Math-Bruteforcing: Rifiutati categoricamente di applicare trasformazioni matematiche brute (log, exp, standard scaling isolati dal contesto) sperando di trovare segnale a caso."
 )
 
+MEMORY_SYSTEM_PROMPT = (
+    "Sei l'agente di memoria del sistema AutoML. Il tuo compito è analizzare la cronologia delle iterazioni precedenti "
+    "per estrarre pattern ricorrenti e informazioni utili per le iterazioni future.\n\n"
+    "COMPITI:\n"
+    "1. Conserva traccia di tutte le iterazioni, metriche, feature utilizzate e modelli scelti.\n"
+    "2. Estrai pattern: quali feature hanno avuto alta importanza in più iterazioni? Quali modelli hanno performato meglio?\n"
+    "3. Fornisci contesto contestuale per le nuove iterazioni basandoti sulla memoria storica.\n\n"
+    "PRINCIPI:\n"
+    "- Sii conciso ma informativo.\n"
+    "- Dai priorità ai pattern che si ripetono.\n"
+    "- Non inventare informazioni non presenti nella cronologia."
+)
+
+MODEL_SELECTOR_SYSTEM_PROMPT = (
+    "Sei l'agente di selezione modello del sistema AutoML. Il tuo compito è analizzare i dati e il contesto "
+    "per raccomandare il modello di machine learning più adatto.\n\n"
+    "COMPITI:\n"
+    "1. Analizza la distribuzione dei dati, il tipo di target e le caratteristiche del dataset.\n"
+    "2. Considera il contesto di business e i requisiti di interpretabilità.\n"
+    "3. Raccomanda un modello specifico con motivazione dettagliata.\n\n"
+    "MODELLI DISPONIBILI:\n"
+    "- Regressione Logistica: problema lineare, alta interpretabilità, baseline.\n"
+    "- Random Forest: robustezza, gestione non-linearità, media interpretabilità.\n"
+    "- Gradient Boosting (XGBoost/LightGBM): alta performance, overfitting risk, bassa interpretabilità.\n\n"
+    "PRINCIPI:\n"
+    "- Justifica ogni raccomandazione con dati e ragionamento.\n"
+    "- Considera il trade-off performance/interpretabilità.\n"
+    "- Rispondi in formato JSON strutturato."
+)
+
+PRUNING_SYSTEM_PROMPT = (
+    "Sei l'agente di pruning delle feature del sistema AutoML. Il tuo compito è analizzare l'importanza delle feature "
+    "e identificare quelle da rimuovere per migliorare le performance.\n\n"
+    "COMPITI:\n"
+    "1. Analizza feature_importance e correlazioni.\n"
+    "2. Identifica feature rumorose, ridondanti o con bassa importanza.\n"
+    "3. Genera una lista di feature da rimuovere con motivazione.\n\n"
+    "CRITERI DI PRUNING:\n"
+    "- Bassa importanza (< 0.01)\n"
+    "- Alta correlazione con altre feature (> 0.9)\n"
+    "- Feature con molti missing value (> 50%)\n"
+    "- Feature con single categoria dominante (> 95%)\n\n"
+    "PRINCIPI:\n"
+    "- Sii conservativo: meglio rimuovere meno feature che troppe.\n"
+    "- Justifica ogni decisione di rimozione.\n"
+    "- Rispondi in formato JSON con lista feature da rimuovere."
+)
+
+STRATEGY_SYSTEM_PROMPT = (
+    "Sei l'agente di strategia del sistema AutoML. Il tuo compito è generare una strategia di business "
+    "per la creazione di feature derivate basata sul dominio del problema.\n\n"
+    "COMPITI:\n"
+    "1. Analizza il glossario semantico e lo schema dei dati.\n"
+    "2. Identifica fenomeni di business rilevanti per la predizione.\n"
+    "3. Proponi strategie di feature crossing, ratio e aggregazioni semantiche.\n\n"
+    "PRINCIPI:\n"
+    "- Focus sulla semantica, non sulla matematica.\n"
+    "- Proponi feature che riflettono dinamiche del mondo reale.\n"
+    "- Evita trasformazioni elementari (log, exp, polinomi)."
+)
+
+CODE_SYSTEM_PROMPT = (
+    "Sei l'agente di generazione codice del sistema AutoML. Il tuo compito è generare codice Python "
+    "per il feature engineering e il training del modello.\n\n"
+    "COMPITI:\n"
+    "1. Implementa le feature derivate dalla strategia di business.\n"
+    "2. Applica il pruning delle feature identificate.\n"
+    "3. Gestisci missing value e codifica variabili categoriche.\n"
+    "4. Implementa il modello di machine learning scelto.\n\n"
+    "PRINCIPI:\n"
+    "- Scrivi codice pulito, modulare e difensivo.\n"
+    "- Gestisci sempre null, nan e infinite.\n"
+    "- Mantieni la colonna target intatta durante le trasformazioni.\n"
+    "- NON usare trasformazioni matematiche elementari (log, exp, polinomi)."
+)
+
+EVALUATOR_SYSTEM_PROMPT = (
+    "Sei l'agente di valutazione del sistema AutoML. Il tuo compito è analizzare i risultati dell'iterazione "
+    "e generare riflessioni per migliorare le performance nelle iterazioni successive.\n\n"
+    "COMPITI:\n"
+    "1. Analizza il report di valutazione (metriche, feature importance).\n"
+    "2. Interpreta i grafici delle distribuzioni delle feature.\n"
+    "3. Identifica pattern di successo e fallimento.\n"
+    "4. Proponi azioni concrete per migliorare.\n\n"
+    "PRINCIPI:\n"
+    "- Sii analitico e tecnico.\n"
+    "- Collega le osservazioni ai risultati concreti.\n"
+    "- Proponi azioni specifiche e actionable.\n"
+    "- Non proporre mai trasformazioni matematiche elementari."
+)
+
 def get_business_strategy_prompt(glossary: str, data_schema: str, data_sample: str) -> str:
     return f"""
         Analizza i seguenti metadati di progetto:
@@ -176,3 +267,134 @@ Rules:
 4. Only fix what's broken
 
 Return ONLY the fixed Python code."""
+
+
+def get_model_selection_prompt(
+    data_schema: str,
+    data_sample: str,
+    glossary: str,
+    memory_context: str | None = None,
+    feature_importance: dict | None = None
+) -> str:
+    fi_section = ""
+    if feature_importance:
+        fi_str = "\n".join(f"  - {k}: {v:.4f}" for k, v in list(feature_importance.items())[:10])
+        fi_section = f"\n# FEATURE IMPORTANCE (ultimo modello)\n{fi_str}\n"
+
+    mem_section = f"\n# MEMORIA STORICA\n{memory_context}\n" if memory_context else ""
+
+    return f"""
+        Analizza il dataset e raccomanda il modello di machine learning più adatto.
+
+        # SCHEMA DATI
+        {data_schema}
+
+        # SAMPLE DATI
+        {data_sample}
+
+        # GLOSSARIO
+        {glossary}
+        {mem_section}
+        {fi_section}
+
+        TASK:
+        1. Analizza le caratteristiche del dataset (numero feature, tipo target, distribuzione).
+        2. Considera i pattern dalla memoria storica (se disponibili).
+        3. Considera l'interpretabilità richiesta dal business.
+        4. Raccomanda un singolo modello con motivazione dettagliata.
+
+        Rispondi ESCLUSIVAMENTE con JSON valido (no markdown):
+        {{
+            "recommended_model": "nome del modello",
+            "rationale": "motivazione dettagliata (2-3 frasi)",
+            "backup_model": "eventuale modello alternativo"
+        }}
+    """
+
+
+def get_pruning_prompt(
+    feature_importance: dict,
+    correlations: dict | None = None,
+    memory_context: str | None = None
+) -> str:
+    corr_section = ""
+    if correlations:
+        corr_str = "\n".join(f"  - {k} <-> {v:.3f}" for k, v in list(correlations.items())[:15])
+        corr_section = f"\n# CORRELAZIONI TRA FEATURE\n{corr_str}\n"
+
+    mem_section = f"\n# MEMORIA STORICA\n{memory_context}\n" if memory_context else ""
+
+    fi_str = "\n".join(f"  - {k}: {v:.4f}" for k, v in sorted(feature_importance.items(), key=lambda x: x[1], reverse=True))
+
+    return f"""
+        Analizza le feature e identifica quelle da rimuovere.
+
+        # FEATURE IMPORTANCE
+        {fi_str}
+        {corr_section}
+        {mem_section}
+
+        CRITERI DI PRUNING:
+        - Rimuovi feature con importanza < 0.01
+        - Rimuovi feature con correlazione > 0.9 (ridondanza)
+        - Rimuovi feature con singola categoria dominante (> 95%)
+        - Rimuovi feature identificate come problematiche nella memoria storica
+
+        TASK:
+        1. Identifica le feature da rimuovere.
+        2. Per ogni feature, indica il motivo della rimozione.
+        3. Suggerisci eventuali azioni correttive.
+
+        Rispondi ESCLUSIVAMENTE con JSON valido (no markdown):
+        {{
+            "features_to_drop": ["feature1", "feature2"],
+            "rationale": {{
+                "feature1": "motivo rimozione",
+                "feature2": "motivo rimozione"
+            }},
+            "suggestions": ["eventuali suggerimenti aggiuntivi"]
+        }}
+    """
+
+
+def get_iterative_strategy_prompt(
+    glossary: str,
+    data_schema: str,
+    data_sample: str,
+    memory_context: str,
+    last_iteration_results: dict | None = None
+) -> str:
+    last_results_section = ""
+    if last_iteration_results:
+        metric = last_iteration_results.get('metric', 'N/A')
+        features = ", ".join(last_iteration_results.get('features_used', [])[:5])
+        model = last_iteration_results.get('model_used', 'N/A')
+        last_results_section = f"\n# ULTIMA ITERAZIONE\n- Metrica: {metric}\n- Features usate: {features}\n- Modello: {model}\n"
+
+    return f"""
+        Analizza il contesto e genera/aggiorna la strategia di business.
+
+        # GLOSSARIO SEMANTICO
+        {glossary}
+
+        # SCHEMA E SAMPLE DATI
+        {data_schema}
+        {data_sample}
+
+        # MEMORIA STORICA
+        {memory_context}
+        {last_results_section}
+
+        TASK:
+        1. Considera cosa ha funzionato nelle iterazioni precedenti.
+        2. Identifica nuove opportunità basate sui pattern memorizzati.
+        3. Aggiorna o conferma la strategia di business.
+        4. Proponi 2-3 nuove feature che sfruttino i pattern identificati.
+
+        Restituisci ESCLUSIVAMENTE JSON valido (no markdown):
+        {{
+            "business_strategy": "strategia aggiornata",
+            "new_feature_ideas": ["idea1", "idea2", "idea3"],
+            "model_selection": "modello consigliato"
+        }}
+    """

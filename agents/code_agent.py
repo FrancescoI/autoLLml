@@ -2,15 +2,16 @@ import re
 from autogen_agentchat.agents import AssistantAgent
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 
-from prompts import SYSTEM_PROMPT, get_code_generation_prompt, get_error_fix_prompt
+from prompts import SYSTEM_PROMPT, CODE_SYSTEM_PROMPT, get_code_generation_prompt, get_error_fix_prompt
 
 
 class CodeAgent:
-    def __init__(self, model_client: OpenAIChatCompletionClient):
+    def __init__(self, model_client: OpenAIChatCompletionClient, use_specialized_prompt: bool = True):
+        system_msg = CODE_SYSTEM_PROMPT if use_specialized_prompt else SYSTEM_PROMPT
         self.agent = AssistantAgent(
             name="CodeAgent",
             model_client=model_client,
-            system_message=SYSTEM_PROMPT,
+            system_message=system_msg,
         )
 
     async def generate_code(
