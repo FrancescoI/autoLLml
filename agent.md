@@ -15,7 +15,7 @@ AutoLLml is an LLM-powered Automated Machine Learning system that iteratively im
 
 ### 2.1 Agent System
 
-The system consists of four specialized agents coordinated by an orchestrator:
+The system consists of seven specialized agents coordinated by an orchestrator:
 
 | Agent | Responsibility |
 |-------|----------------|
@@ -23,6 +23,9 @@ The system consists of four specialized agents coordinated by an orchestrator:
 | **StrategyAgent** | Generates business-focused feature strategies from glossary and data schema |
 | **CodeAgent** | Generates Python code for feature engineering and model pipeline |
 | **EvaluatorAgent** | Analyzes results, plots, and feature importance to provide actionable reflection |
+| **MemoryAgent** | Maintains conversation history and context across iterations |
+| **ModelSelectorAgent** | Recommends optimal ML model based on task type and data characteristics |
+| **PruningAgent** | Identifies and removes noisy/redundant features that add no discriminative power |
 
 ### 2.2 Training Pipeline
 
@@ -43,6 +46,8 @@ Modular pipeline for model training and evaluation:
 - **No math-bruteforcing**: Raw transformations like `log()`, `exp()`, polynomial features, or square roots on single columns are explicitly forbidden. All derived features must combine multiple columns or apply true operational logic.
 
 - **Pruning**: Remove redundant, collinear, or noisy features that add no discriminative power.
+
+- **Feature Selection**: The system must identify and remove non-predictive noise features. Test datasets include intentionally added noise variables to validate this capability.
 
 - **Clean code**: Robust handling of missing values, proper data types, defensive programming with pandas and scikit-learn.
 

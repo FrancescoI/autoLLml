@@ -12,6 +12,7 @@ AutoLLml uses GPT-5 to generate business-aware derived features and optimize ML 
 - **Iterative Improvement**: LLM analyzes previous results + plots to generate better features each round
 - **Multi-Modal Analysis**: Uses GPT-5 Vision to analyze feature distribution plots
 - **Automatic Pruning**: Removes noisy/redundant features
+- **Feature Selection Testing**: Dataset includes noise features to test pruning capability
 - **Error Recovery**: If code crashes, LLM receives error message to fix in next iteration
 
 ## Architecture
@@ -24,14 +25,22 @@ Built with **Microsoft Agent Framework (AutoGen)**, featuring a multi-agent syst
 │  Coordinates the workflow between specialized agents            │
 └─────────────────────────┬───────────────────────────────────────┘
                           │
-        ┌─────────────────┼─────────────────┐
-        ▼                 ▼                 ▼
+      ┌───────────────────┼───────────────────┐
+      ▼                   ▼                   ▼
 ┌───────────────┐ ┌───────────────┐ ┌───────────────┐
 │StrategyAgent  │ │  CodeAgent    │ │EvaluatorAgent │
 │Generates      │ │Generates      │ │Analyzes       │
 │business       │ │feature        │ │results and    │
 │strategy       │ │engineering    │ │reflects       │
 │               │ │code           │ │               │
+└───────────────┘ └───────────────┘ └───────────────┘
+      │                   │                   │
+      ▼                   ▼                   ▼
+┌───────────────┐ ┌───────────────┐ ┌───────────────┐
+│ MemoryAgent   │ │ModelSelector  │ │ PruningAgent  │
+│Maintains      │ │Recommends     │ │Removes noisy  │
+│conversation   │ │optimal ML     │ │features       │
+│history        │ │model          │ │               │
 └───────────────┘ └───────────────┘ └───────────────┘
 ```
 
@@ -91,7 +100,9 @@ automl/
 │   ├── code_agent.py           # Feature engineering code
 │   ├── evaluator_agent.py      # Results analysis
 │   ├── orchestrator_agent.py   # Workflow coordinator
-│   └── workflow.py            # AutoGen workflow orchestration
+│   ├── memory_agent.py         # Conversation history management
+│   ├── model_selector_agent.py # ML model recommendation
+│   └── pruning_agent.py        # Feature pruning
 ├── train/                     # Training pipeline (modular)
 │   ├── __init__.py
 │   ├── __main__.py            # Module entry point
@@ -105,7 +116,8 @@ automl/
 ├── scripts/                   # Utility scripts
 │   └── reset_codebase.py       # Reset to baseline
 ├── dynamic_features.py         # Generated feature engineering (overwritten each iteration)
-├── glossary.md               # Data dictionary & domain knowledge
+├── glossary.md                 # Data dictionary & domain knowledge
+├── agent.md                    # Architectural blueprint
 └── data/
     └── dataset.csv              # Input dataset
 ```
