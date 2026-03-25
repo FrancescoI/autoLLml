@@ -3,7 +3,7 @@
 > Generato automaticamente dall'OrchestratorAgent con Microsoft Agent Framework.
 
 ---
-## Run 1  —  2026-03-25 16:21:02
+## Run 1  —  2026-03-25 16:54:57
 
 ### Metriche
 | Metrica | Valore |
@@ -35,142 +35,161 @@
 *(non generata — run baseline)*
 
 ---
-## Run 2  —  2026-03-25 16:23:27
+## Run 2  —  2026-03-25 16:56:00
 
 ### Metriche
 | Metrica | Valore |
 |---------|--------|
 | Task Type | CLASSIFICATION |
-| F1_weighted Mean (CV-5) | **0.7663** ± 0.0034 |
-| Precision (CV-5) | 0.7735 |
-| Recall (CV-5) | 0.7637 |
-| AUC-ROC (CV-5) | 0.8496 |
-| Δ vs run precedente | +0.0107  ▲ |
-| Numero feature in input | 25 |
+| F1_weighted Mean (CV-5) | **0.7752** ± 0.0016 |
+| Precision (CV-5) | 0.7802 |
+| Recall (CV-5) | 0.7731 |
+| AUC-ROC (CV-5) | 0.8572 |
+| Δ vs run precedente | +0.0196  ▲ |
+| Numero feature in input | 27 |
 
 ### Top correlazioni con il target (Pearson)
-  - `debt_capacity_gap`: +0.4944
-  - `debt_burden_ratio`: +0.4188
+  - `income_debt_balance_bucket`: -0.5463
+  - `debt_sustainability_index`: -0.5054
+  - `debt_burden_gap`: +0.5054
+  - `multi_dim_vulnerability`: +0.4557
   - `tot_outstanding_debt`: +0.3847
-  - `active_line_delinquency_burden`: +0.3778
-  - `debt_pressure_index`: +0.3595
   - `annual_income`: -0.3272
-  - `credit_stress_index`: +0.0335
-  - `delinquency_30d_freq`: +0.0221
 
 ### Feature importance (top 10)
-  - `num__debt_burden_ratio`: 0.1857
-  - `num__debt_capacity_gap`: 0.1593
-  - `num__debt_pressure_index`: 0.1315
-  - `num__tot_outstanding_debt`: 0.0722
-  - `num__active_line_delinquency_burden`: 0.0669
-  - `num__annual_income`: 0.0587
-  - `num__recent_customer_service_load`: 0.0357
-  - `cat__account_manager_id`: 0.0354
-  - `num__service_intensity_per_tenure`: 0.0340
-  - `num__tenure_adjusted_relationship_frict`: 0.0305
+  - `num__debt_burden_gap`: 0.4128
+  - `num__debt_sustainability_index`: 0.4009
+  - `num__annual_income`: 0.0551
+  - `num__tot_outstanding_debt`: 0.0525
+  - `num__credit_lines_count`: 0.0107
+  - `num__multi_dim_vulnerability`: 0.0094
+  - `num__manager_historical_default_rate`: 0.0088
+  - `num__low_engagement_high_service`: 0.0056
+  - `num__customer_tenure_months`: 0.0051
+  - `num__behavioral_credit_stress`: 0.0050
 
 ### Feature implementate in questa run
   *(baseline)*
 
 ### Business strategy applicata
-1) Rischio di sovraindebitamento: costruire un indice di leva finanziaria combinando tot_outstanding_debt con annual_income per rappresentare quanto il cliente è esposto rispetto alla propria capacità reddituale; questo cattura la sostenibilità del debito, uno dei driver più forti del default. 2) Pressione creditizia e fragilità di comportamento: incrociare delinquency_30d_freq con credit_lines_count per distinguere clienti con molte linee attive ma già segnali di ritardo, evidenziando una possibile gestione stressata del credito. 3) Vitalità della relazione cliente-banca: aggregare customer_tenure_months, support_tickets_count e marketing_email_opens in un indicatore di engagement/attrito, dove molti ticket e poche aperture email su lunga anzianità possono segnalare deterioramento della relazione o minor attenzione alle comunicazioni. 4) Rischio contestuale per segmento operativo: creare feature di cross tra industry_sector e variabili finanziarie/comportamentali per catturare differenze strutturali tra settori (es. settori più ciclici con stessa leva possono avere rischio diverso), e analogamente tra branch_code/account_manager_id e segnali di morosità per intercettare effetti di filiale o di gestione del portafoglio. 5) Intensità di servizio rispetto alla maturità del cliente: combinare support_tickets_count e marketing_email_opens con customer_tenure_months per misurare se un cliente recente o storico mostra un livello di interazione anomalo rispetto al ciclo di vita, utile come segnale indiretto di frizione, difficoltà operative o scarso coinvolgimento.
+1) Indice di sostenibilità del debito: combinare reddito annuo e debito residuo per rappresentare la capacità del cliente di assorbire il servizio del debito; utile perché il default è spesso guidato dal disallineamento tra flussi in entrata e esposizione finanziaria. 2) Stress creditizio comportamentale: incrociare frequenza di morosità a 30 giorni con numero di linee di credito attive per catturare clienti con segni di tensione su portafogli più complessi; questa dinamica riflette l’aumento del rischio quando più linee vengono gestite con ritardi ricorrenti. 3) Stabilità della relazione cliente-banca: combinare customer_tenure_months con support_tickets_count e marketing_email_opens per distinguere clienti consolidati e ingaggiati da clienti “fragili” con molte richieste di assistenza e bassa risposta ai contatti; segnali di frizione operativa possono precedere il default. 4) Rischio di contesto operativo/commerciale: aggregare industry_sector, branch_code e account_manager_id per creare indicatori di rischio relativo per segmento/filiale/gestore, catturando differenze strutturali di portafoglio e qualità della gestione; questo è utile per identificare sacche di rischio non spiegate dalle sole variabili cliente. 5) Profilo di vulnerabilità multi-dimensionale: costruire crossing tra settore industriale e metriche finanziarie/comportamentali (es. industria ad alta volatilità + alta morosità + debito elevato) per intercettare combinazioni di business più esposte a shock di liquidità e default.
 
 ---
-## Run 3  —  2026-03-25 16:24:23
+## Run 3  —  2026-03-25 16:57:05
 
 ### Metriche
 | Metrica | Valore |
 |---------|--------|
 | Task Type | CLASSIFICATION |
-| F1_weighted Mean (CV-5) | **0.7598** ± 0.0043 |
-| Precision (CV-5) | 0.7633 |
-| Recall (CV-5) | 0.7580 |
-| AUC-ROC (CV-5) | 0.8440 |
-| Δ vs run precedente | -0.0065  ▼ |
-| Numero feature in input | 25 |
+| F1_weighted Mean (CV-5) | **0.7743** ± 0.0018 |
+| Precision (CV-5) | 0.7796 |
+| Recall (CV-5) | 0.7721 |
+| AUC-ROC (CV-5) | 0.8561 |
+| Δ vs run precedente | -0.0009  ▼ |
+| Numero feature in input | 34 |
 
 ### Top correlazioni con il target (Pearson)
-  - `debt_capacity_gap`: +0.4944
-  - `debt_burden_ratio`: +0.4188
+  - `high_leverage_pressure`: +0.5054
+  - `debt_sustainability_index`: -0.5054
+  - `debt_burden_gap`: +0.5054
+  - `debt_credit_complexity`: +0.3847
   - `tot_outstanding_debt`: +0.3847
-  - `active_line_delinquency_burden`: +0.3778
-  - `debt_pressure_index`: +0.3595
-  - `annual_income`: -0.3272
-  - `credit_stress_index`: +0.0335
-  - `delinquency_30d_freq`: +0.0221
+  - `multi_dim_vulnerability`: +0.3439
 
 ### Feature importance (top 10)
-  *(non disponibile)*
+  - `num__high_leverage_pressure`: 0.3796
+  - `num__debt_sustainability_index`: 0.3276
+  - `num__debt_burden_gap`: 0.1122
+  - `num__annual_income`: 0.0567
+  - `num__tot_outstanding_debt`: 0.0256
+  - `num__debt_credit_complexity`: 0.0235
+  - `num__credit_lines_count`: 0.0083
+  - `num__financial_behavioral_risk_bundle`: 0.0082
+  - `cat__manager_friction_profile`: 0.0054
+  - `num__industry_manager_group_size`: 0.0050
 
 ### Feature implementate in questa run
   *(baseline)*
 
 ### Business strategy applicata
-L’iterazione migliore con Random Forest indica che il problema beneficia di interazioni non lineari e di segmentazione del rischio, più che di relazioni puramente lineari. La strategia aggiornata deve quindi rafforzare tre assi: 1) leva finanziaria e capacità di rimborso, costruendo segnali che combinano debito, reddito e intensità delle linee di credito per distinguere clienti semplicemente indebitati da clienti realmente sotto stress; 2) deterioramento comportamentale e relazione con la banca, integrando morosità, ticket di supporto e tenure per intercettare clienti che mostrano frizione operativa o preavvisi di default; 3) rischio contestuale di segmento, sfruttando industria, filiale e account manager per catturare differenze di portafoglio, policy o qualità del servicing. In ottica di multicollinearità, conviene preferire feature composite semanticamente robuste invece di molte variabili finanziarie ridondanti. Il modello best-fit rimane un ensemble ad albero, in particolare Random Forest o boosted tree, perché riescono a modellare soglie e interazioni tra rischio finanziario, comportamento e contesto commerciale.
+La performance è stagnante: la migliore iterazione è rimasta ferma a 0.7752, quindi non emerge un miglioramento rispetto all’ultima prova. Va quindi rafforzata la strategia con feature che catturino segnali di rischio più vicini al comportamento reale del cliente, non solo la sua fotografia finanziaria. Le opportunità più promettenti sono: 1) intensità di stress finanziario, cioè il rapporto tra debito, reddito e complessità del credito per distinguere clienti con leva eccessiva; 2) segnali di deterioramento comportamentale, combinando morosità, ticket di supporto e tenure per intercettare clienti che stanno entrando in difficoltà operativa e relazionale; 3) rischio di portafoglio/contesto, usando aggregazioni per settore, filiale e account manager per identificare aree o gestioni con tassi di default strutturalmente più alti; 4) engagement vs frizione, confrontando aperture marketing e ticket di supporto per capire se il cliente è ingaggiato o solo reattivo ai problemi. La strategia precedente va confermata ma ampliata con crossing più informativi tra finanza, relazione e contesto operativo.
 
 ---
-## Run 4  —  2026-03-25 16:25:17
+## Run 4  —  2026-03-25 16:58:07
 
 ### Metriche
 | Metrica | Valore |
 |---------|--------|
 | Task Type | CLASSIFICATION |
-| F1_weighted Mean (CV-5) | **0.7598** ± 0.0043 |
-| Precision (CV-5) | 0.7633 |
-| Recall (CV-5) | 0.7580 |
-| AUC-ROC (CV-5) | 0.8440 |
-| Δ vs run precedente | +0.0000  ▲ |
-| Numero feature in input | 25 |
+| F1_weighted Mean (CV-5) | **0.7754** ± 0.0023 |
+| Precision (CV-5) | 0.7807 |
+| Recall (CV-5) | 0.7732 |
+| AUC-ROC (CV-5) | 0.8565 |
+| Δ vs run precedente | +0.0011  ▲ |
+| Numero feature in input | 35 |
 
 ### Top correlazioni con il target (Pearson)
-  - `debt_capacity_gap`: +0.4944
-  - `debt_burden_ratio`: +0.4188
-  - `tot_outstanding_debt`: +0.3847
-  - `active_line_delinquency_burden`: +0.3778
-  - `debt_pressure_index`: +0.3595
-  - `annual_income`: -0.3272
-  - `credit_stress_index`: +0.0335
-  - `delinquency_30d_freq`: +0.0221
+  - `sustainable_leverage_flag`: -0.5551
+  - `financial_stress_normalized`: +0.5054
+  - `debt_sustainability_index`: -0.5054
+  - `debt_burden_gap`: +0.5054
+  - `multi_dim_risk_profile`: +0.3939
+  - `credit_spread_pressure`: +0.3847
 
 ### Feature importance (top 10)
-  *(non disponibile)*
+  - `num__debt_sustainability_index`: 0.3798
+  - `num__financial_stress_normalized`: 0.2573
+  - `num__debt_burden_gap`: 0.1795
+  - `num__annual_income`: 0.0560
+  - `num__tot_outstanding_debt`: 0.0291
+  - `num__credit_spread_pressure`: 0.0227
+  - `num__credit_lines_count`: 0.0131
+  - `num__early_fragility_signal`: 0.0092
+  - `num__multi_dim_risk_profile`: 0.0071
+  - `cat__manager_fragility_profile`: 0.0055
 
 ### Feature implementate in questa run
   *(baseline)*
 
 ### Business strategy applicata
-Le iterazioni mostrano che le feature legate al peso del debito e alla pressione sulle linee attive sono le più informative, ma l’ultima configurazione ha perso performance perché ha probabilmente introdotto segnali troppo sovrapposti e poco diversificati. La strategia aggiornata deve quindi mantenere il focus sulla vulnerabilità finanziaria, ma arricchirlo con due dimensioni più distintive: 1) sostenibilità del debito nel tempo, combinando debito, reddito e tenure per distinguere un indebitamento fisiologico da uno strutturalmente rischioso; 2) qualità del comportamento creditizio, integrando morosità con l’ampiezza dell’esposizione per misurare la pressione reale sulle linee attive; 3) stato della relazione cliente-banca, usando supporto e marketing come segnali di frizione, disengagement o difficoltà operative; 4) segmentazione contestuale per settore/filiale/manager per intercettare effetti di portafoglio e qualità del servicing. In sintesi, conviene passare da soli ratio di debito a indicatori compositi che riflettano rischio finanziario + maturità della relazione + contesto operativo, riducendo ridondanza tra variabili strettamente collegate.
+La tendenza è in peggioramento (0.7752 -> 0.7743), quindi la sola raffinazione dell’indice di sostenibilità del debito non sta aggiungendo informazione sufficiente. Bisogna cambiare enfasi: non solo capacità finanziaria statica, ma combinazioni di rischio che descrivono la vulnerabilità operativa e la qualità della relazione con la banca. Le aree più promettenti sono: 1) stress finanziario normalizzato, che metta in relazione debito, reddito e numero di linee per distinguere leve sostenibili da profili sovraesposti; 2) deterioramento relazionale, dove ticket di supporto elevati e bassa interazione marketing indicano attrito, possibile insoddisfazione o difficoltà di gestione; 3) rischio di contesto multi-livello, con aggregazioni per settore, filiale e account manager per catturare differenze strutturali di portafoglio e di qualità di servizio; 4) segnali di fragilità precoce, combinando delinquency_30d_freq con customer_tenure_months per distinguere nuovi clienti a rischio da clienti storicamente stabili. La strategia precedente va mantenuta come base, ma va arricchita con indicatori relazionali e di portafoglio più vicini ai driver reali del default.
 
 ---
-## Run 5  —  2026-03-25 16:26:09
+## Run 5  —  2026-03-25 16:59:05
 
 ### Metriche
 | Metrica | Valore |
 |---------|--------|
 | Task Type | CLASSIFICATION |
-| F1_weighted Mean (CV-5) | **0.7598** ± 0.0043 |
-| Precision (CV-5) | 0.7633 |
-| Recall (CV-5) | 0.7580 |
-| AUC-ROC (CV-5) | 0.8440 |
-| Δ vs run precedente | +0.0000  ▲ |
-| Numero feature in input | 25 |
+| F1_weighted Mean (CV-5) | **0.7747** ± 0.0032 |
+| Precision (CV-5) | 0.7799 |
+| Recall (CV-5) | 0.7725 |
+| AUC-ROC (CV-5) | 0.8570 |
+| Δ vs run precedente | -0.0007  ▼ |
+| Numero feature in input | 33 |
 
 ### Top correlazioni con il target (Pearson)
-  - `debt_capacity_gap`: +0.4944
-  - `debt_burden_ratio`: +0.4188
+  - `financial_stress_normalized`: +0.5054
+  - `debt_sustainability_index`: -0.5054
+  - `debt_burden_gap`: +0.5054
+  - `composite_risk_core`: +0.4108
+  - `leverage_complexity_pressure`: +0.3847
   - `tot_outstanding_debt`: +0.3847
-  - `active_line_delinquency_burden`: +0.3778
-  - `debt_pressure_index`: +0.3595
-  - `annual_income`: -0.3272
-  - `credit_stress_index`: +0.0335
-  - `delinquency_30d_freq`: +0.0221
 
 ### Feature importance (top 10)
-  *(non disponibile)*
+  - `num__financial_stress_normalized`: 0.3744
+  - `num__debt_sustainability_index`: 0.3243
+  - `num__debt_burden_gap`: 0.1192
+  - `num__annual_income`: 0.0545
+  - `num__leverage_complexity_pressure`: 0.0256
+  - `num__tot_outstanding_debt`: 0.0227
+  - `num__multi_line_pressure`: 0.0142
+  - `num__composite_risk_core`: 0.0115
+  - `num__credit_lines_count`: 0.0065
+  - `cat__manager_fragility_profile`: 0.0056
 
 ### Feature implementate in questa run
   *(baseline)*
 
 ### Business strategy applicata
-Le iterazioni precedenti indicano che il segnale più forte viene dalla dimensione di pressione finanziaria, in particolare dal debito rapportato alla capacità e dalla morosità sulle linee attive. Tuttavia, le feature già provate risultano molto concentrate sullo stesso fenomeno, quindi la strategia va aggiornata per mantenere il nucleo di rischio creditizio ma aggiungere una lettura più sfumata del ciclo di vita e del comportamento relazionale. In pratica: 1) confermare la centralità dell’indebitamento sostenibile, ma trasformarlo in indicatori che distinguano esposizione assoluta, carico relativo e resilienza nel tempo; 2) arricchire il segnale di morosità con una lettura di “intensità del problema” rispetto alla relazione e al numero di linee, così da separare incidenti occasionali da difficoltà strutturali; 3) introdurre feature di engagement/attrito per catturare clienti che interagiscono poco o hanno bisogno di più supporto, perché questo può anticipare deterioramento; 4) preservare il contesto di filiale, manager e settore solo come layer di segmentazione, non come segnale dominante. La direzione corretta è quindi passare da ratio finanziari isolati a indici compositi di rischio economico, stress operativo e qualità della relazione, mantenendo un modello ad alberi per sfruttare interazioni e soglie.
+La tendenza è in plateau, con un lieve miglioramento nell’ultima iterazione (0.7752 -> 0.7743 -> 0.7754), quindi la strategia base sul rischio di indebitamento continua a funzionare ma ha raggiunto un tetto. I pattern ricorrenti indicano che le variabili di debito e reddito restano il nucleo predittivo, ma manca ancora una lettura più “aziendale” del deterioramento. Conviene quindi consolidare il blocco finanziario e aggiungere tre nuove dimensioni: 1) pressione da leva multi-linea, per misurare quando il debito è sostenibile solo in presenza di poche linee ma diventa fragile all’aumentare della complessità creditizia; 2) segnali di disallineamento relazione-cliente, dove alta attività di supporto e bassa risposta marketing suggeriscono deterioramento operativo o scarso engagement; 3) rischio di ecosistema commerciale, cioè differenze sistematiche tra settore, filiale e gestore che possono riflettere qualità del portafoglio o del presidio commerciale. In sintesi, mantenere l’asse debt sustainability ma arricchirlo con feature che catturano fragilità comportamentale e rischio di contesto per superare il plateau.

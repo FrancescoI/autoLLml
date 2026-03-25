@@ -23,7 +23,10 @@ class EvaluatorAgent:
         evaluation_report: dict,
         glossary: str,
         plot_paths: list[str] | None = None,
-        feature_importance: dict | None = None
+        feature_importance: dict | None = None,
+        trend_context: str = "",
+        successful_patterns: str = "",
+        failed_patterns: str = ""
     ) -> str:
         plot_paths = plot_paths or []
         
@@ -31,7 +34,10 @@ class EvaluatorAgent:
             iter_num,
             json.dumps(evaluation_report, indent=2),
             glossary,
-            json.dumps(feature_importance or {}, indent=2) if feature_importance else None
+            json.dumps(feature_importance or {}, indent=2) if feature_importance else None,
+            trend_context,
+            successful_patterns,
+            failed_patterns
         )
         
         content: list[str | Image] = [text_prompt]
