@@ -66,6 +66,7 @@ The optimization runs for a configurable number of iterations (default: 5).
 
 1. **Strategy Generation**
    - StrategyAgent reads glossary.md and data schema
+   - Considers trend context (improving/stagnating/declining) from memory
    - Generates 3-5 business feature strategies (not raw transforms)
    - Suggests 2-3 appropriate ML models with rationale
 
@@ -76,8 +77,11 @@ The optimization runs for a configurable number of iterations (default: 5).
    - Compute feature importance from model
 
 3. **Reflection**
-   - EvaluatorAgent receives: evaluation report, feature importance, plots
+   - EvaluatorAgent receives: evaluation report, feature importance, plots, trend context
    - Analyzes separability in violin plots, monotonic trends in bar charts
+   - Performs trend analysis: is model improving, stagnating, or declining?
+   - Conducts counterfactual reasoning: what alternative approaches could work?
+   - Performs ablation analysis: which features can be removed while maintaining predictive power?
    - Identifies: high-importance features, redundant features, new business logic opportunities
    - Outputs actionable feedback for next iteration
 
@@ -92,6 +96,12 @@ The optimization runs for a configurable number of iterations (default: 5).
 6. **Report Update**
    - Append iteration results to evaluation_report.md
    - Include metrics, correlations, feature importance, business strategy applied
+
+### Phase 3: Early Stopping (Iteration 4+)
+
+- After iteration 4, Orchestrator checks if improvement is below 1% over 3 consecutive iterations
+- If improvement < threshold: stop optimization early (convergence detected)
+- Prevents wasted computation on non-improving runs
 
 ---
 
@@ -161,9 +171,9 @@ for attempt in range(1, MAX_ERROR_RETRIES + 1):
 
 ## 7. Configuration
 
-### LLM Configuration (utils/config.py)
+### LLM Configuration (config.yaml)
 
-- **model**: GPT model identifier (e.g., gpt-5.4-nano)
+- **model**: GPT model identifier (e.g., gpt-5.4-mini-2026-03-17)
 - **temperature**: Sampling temperature for generation
 - **reasoning_effort**: Reasoning budget (low/medium/high)
 

@@ -190,12 +190,6 @@ python scripts/reset_codebase.py
 python -c "from best_run import restore_best"
 ```
 
-## Web UI (Experimental)
-
-For a custom web dashboard, see the `custom_web_ui` branch which includes:
-- FastAPI backend
-- HTML dashboard with Tailwind CSS
-
 ## License
 
 MIT
