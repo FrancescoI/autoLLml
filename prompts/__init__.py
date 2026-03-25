@@ -118,7 +118,7 @@ def get_business_strategy_prompt(glossary: str, data_schema: str, data_sample: s
         - "model selection": Stringa con 2 o 3 modelli di machine learning adatti al problema, con una breve motivazione per ciascuno.
 """
 
-def get_reflection_prompt(iter_num: int, evaluation_report: str, glossary: str, feature_importance: str | None = None) -> str:
+def get_reflection_prompt(iter_num: int, evaluation_report: str, glossary: str, feature_importance: str | None = None, trend_context: str = "", successful_patterns: str = "", failed_patterns: str = "") -> str:
     fi_section = f"""
         # FEATURE IMPORTANCE (dal modello)
         {feature_importance}
@@ -126,6 +126,21 @@ def get_reflection_prompt(iter_num: int, evaluation_report: str, glossary: str, 
         Analizza l'importanza delle feature per capire quali variabili il modello considera più utili per la predizione.
         Confronta l'importanza del modello con le correlazioni: una feature con alta correlazione ma bassa importanza potrebbe essere ridondante.
     """ if feature_importance else ""
+    
+    trend_section = f"""
+        # TENDENZA METRICA (storico iterazioni precedenti)
+        {trend_context}
+        
+        Analizza la traiettoria: il modello sta migliorando, stagnando, o peggiorando?
+    """ if trend_context else ""
+    
+    patterns_section = f"""
+        # FEATURE DI SUCCESSO (storico)
+        {successful_patterns}
+        
+        # FEATURE FALLITE (storico)
+        {failed_patterns}
+    """ if (successful_patterns or failed_patterns) else ""
     
     return f"""
         Analizza i risultati dell'Iterazione {iter_num}:
@@ -158,19 +173,39 @@ def get_reflection_prompt(iter_num: int, evaluation_report: str, glossary: str, 
         3. Gli outlier visibili nei grafici spiegano anomalie nelle metriche del modello?
         
         {fi_section}
+        {trend_section}
+        {patterns_section}
         
-        # TASK:
+        # TASK - PARTE 1: ANALISI TREND
+        Analizza la tendenza del modello basandoti sullo storico delle metriche:
+        1. Il modello sta migliorando, stagnando (plateau), o declinando?
+        2. Se stagnante o declinante, cosa è cambiato rispetto alle iterazioni precedenti?
+        3. Quali decisioni delle passate iterazioni potrebbero aver causato la stagnazione?
+        
+        # TASK - PARTE 2: RIFLESSIONE PROFonda
         Rifletti in maniera approfondita sulla run precedente, con particolare attenzione alla costruzione di feature derivate e alla scelta del modello di machine learning più opportuno:
         1. Quali feature derivate hanno dimostrato alta importanza prestazionale e qual è la loro logica fenomenologica di dominio? Cosa mostrano i grafici in termini di separabilità tra classi target?
         2. Quali variabili (vecchie o derivate) hanno importanza nulla, o causano solo ridondanza/collinearità, e vanno eliminate nel pruning?
-        3. Basandoti sulle best practice di ML per il contesto corrente e sulle distribuzioni visibili nei grafici, quali nuove logiche di business o incroci andrebbero creati nella prossima run per massimizzare il segnale?
-        4. Seleziona un unico modello, lineare o non lineare, sulla base dei risultati del report di valutazione. Scegli tra regressione logistica, eventualmente con penalizzazione L1/L2, Random Forest o BoostedTree.
+        
+        # TASK - PARTE 3: RAGIONAMENTO CONTROFATTUALE
+        1. Quali combinazioni alternative di feature avrebbero potuto essere provate? Quali interazioni non ancora esplorate potrebbero essere predittive?
+        2. Quale logica di business non ancora esplorata potrebbe aiutare?
+        3. Cosa sarebbe successo se avessi rimosso le feature a bassa importanza invece di aggiungerne di nuove?
+        
+        # TASK - PARTE 4: ABLATION ANALYSIS
+        1. Quali feature potresti rimuovere mantenendo la maggior parte del potere predittivo?
+        2. Qual è il contributo marginale delle top feature rispetto alle altre?
+        
+        # TASK - PARTE 5: PROSSIMA ITERAZIONE
+        1. Basandoti sulle best practice di ML per il contesto corrente e sulle distribuzioni visibili nei grafici, quali nuove logiche di business o incroci andrebbero creati nella prossima run per massimizzare il segnale?
+        2. Se la tendenza è stagnante, potresti provare un approccio radicalmente diverso?
+        3. Seleziona un unico modello, lineare o non lineare, sulla base dei risultati del report di valutazione. Scegli tra regressione logistica, eventualmente con penalizzazione L1/L2, Random Forest o BoostedTree.
 
         ATTENZIONE: Non proporre MAI di costruire trasformate elementari (logaritmi, exp, polinomi, ecc.) di feature esistenti. Il focus deve essere al 100% sulla semantica dei dati.
         ATTENZIONE: Non testare più modelli
         
-        Rispondi in modo tecnico e analitico (max 500 parole). NON scrivere codice Python.
-"""
+        Rispondi in modo tecnico e analitico (max 800 parole). NON scrivere codice Python.
+    """
 
 def get_code_generation_prompt(business_strategy: str, reflection_text: str, last_code: str, last_error: str = None) -> str:
     prompt = f"""
@@ -365,7 +400,9 @@ def get_iterative_strategy_prompt(
     data_schema: str,
     data_sample: str,
     memory_context: str,
-    last_iteration_results: dict | None = None
+    last_iteration_results: dict | None = None,
+    trend_context: str = "",
+    strategy_context: str = ""
 ) -> str:
     last_results_section = ""
     if last_iteration_results:
@@ -373,6 +410,9 @@ def get_iterative_strategy_prompt(
         features = ", ".join(last_iteration_results.get('features_used', [])[:5])
         model = last_iteration_results.get('model_used', 'N/A')
         last_results_section = f"\n# ULTIMA ITERAZIONE\n- Metrica: {metric}\n- Features usate: {features}\n- Modello: {model}\n"
+
+    trend_section = f"\n# TENDENZA RECENTE\n{trend_context}\n" if trend_context else ""
+    strategy_sec = f"\n# MIGLIOR STRATEGIA PRECEDENTE\n{strategy_context}\n" if strategy_context else ""
 
     return f"""
         Analizza il contesto e genera/aggiorna la strategia di business.
@@ -387,12 +427,16 @@ def get_iterative_strategy_prompt(
         # MEMORIA STORICA
         {memory_context}
         {last_results_section}
+        {trend_section}
+        {strategy_sec}
 
         TASK:
         1. Considera cosa ha funzionato nelle iterazioni precedenti.
-        2. Identifica nuove opportunità basate sui pattern memorizzati.
-        3. Aggiorna o conferma la strategia di business.
-        4. Proponi 2-3 nuove feature che sfruttino i pattern identificati.
+        2. Analizza la tendenza attuale: il modello sta migliorando, stagnando o peggiorando?
+        3. Se la tendenza è stagnante/declinante, considera un approccio radicalmente diverso.
+        4. Identifica nuove opportunità basate sui pattern memorizzati e sulla tendenza.
+        5. Aggiorna o conferma la strategia di business.
+        6. Proponi 2-3 nuove feature che sfruttino i pattern identificati.
 
         Restituisci ESCLUSIVAMENTE JSON valido (no markdown):
         {{

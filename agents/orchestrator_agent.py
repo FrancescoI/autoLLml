@@ -52,6 +52,50 @@ class OrchestratorAgent:
         
         print("[*] OrchestratorAgent inizializzato con tutti gli agenti")
 
+    def _get_trend_context(self) -> str:
+        trend_info = self.memory_agent.get_trend_info()
+        if trend_info["trend"] == "insufficient_data":
+            return ""
+        
+        trend = trend_info["trend"]
+        values = trend_info.get("values", [])
+        vals_str = " -> ".join([f"{v:.4f}" for v in values]) if values else ""
+        
+        if trend == "improving":
+            return f"Tendenza: MIGLIORAMENTO ({vals_str})"
+        elif trend == "declining":
+            return f"Tendenza: PEGGIORAMENTO ({vals_str})"
+        else:
+            return f"Tendenza: STAGNO/PLATEAU ({vals_str})"
+
+    def _get_feature_patterns_context(self) -> tuple[str, str]:
+        successful = self.memory_agent.get_successful_patterns(limit=3)
+        failed = self.memory_agent.get_failed_patterns(limit=3)
+        
+        success_str = "\n".join([f"- {p['feature_name']}: {p.get('reason', 'N/A')}" for p in successful]) if successful else "Nessuna feature di successo registrata."
+        fail_str = "\n".join([f"- {p['feature_name']}: {p.get('reason', 'N/A')}" for p in failed]) if failed else "Nessuna feature fallita registrata."
+        
+        return success_str, fail_str
+
+    def _should_stop_early(self, threshold: float = 0.01, window: int = 3) -> bool:
+        history = self.memory_agent.data.get("metric_history", [])
+        if len(history) < window + 1:
+            return False
+        
+        recent = history[-window:]
+        improvements = []
+        for i in range(1, len(recent)):
+            delta = recent[i]["metric"] - recent[i-1]["metric"]
+            improvements.append(delta)
+        
+        avg_improvement = sum(improvements) / len(improvements)
+        
+        if avg_improvement < threshold:
+            print(f"[*] Early stopping: miglioramento medio {avg_improvement:.4f} < soglia {threshold}")
+            return True
+        
+        return False
+
     async def run_iteration(self, iter_num: int) -> dict:
         print(f"\n================ AVVIO ITERAZIONE {iter_num} ================")
         
@@ -97,12 +141,16 @@ class OrchestratorAgent:
         else:
             print("[*] Riesecuzione strategia con contesto memoria...")
             last_iter = self.memory_agent.get_last_iteration()
+            trend_context = self._get_trend_context()
+            strategy_context = self.memory_agent.get_strategy_context()
             strategy_result = await self.strategy_agent.generate_iterative_strategy(
                 self.glossary,
                 self.data_schema,
                 self.data_sample,
                 memory_context,
-                last_iter
+                last_iter,
+                trend_context,
+                strategy_context
             )
             self.business_strategy = strategy_result.get('business_strategy', self.business_strategy)
             new_feature_ideas = strategy_result.get('new_feature_ideas', [])
@@ -143,12 +191,17 @@ class OrchestratorAgent:
             print(f"[*] Feature da rimuovere: {features_to_drop}")
         
         print(f"[*] Analisi risultati con EvaluatorAgent...")
+        trend_context = self._get_trend_context()
+        successful_patterns, failed_patterns = self._get_feature_patterns_context()
         reflection_text = await self.evaluator_agent.evaluate_and_reflect(
             iter_num,
             report,
             self.glossary,
             plot_paths,
-            feature_importance
+            feature_importance,
+            trend_context,
+            successful_patterns,
+            failed_patterns
         )
         safe_to_print = reflection_text.encode('ascii', 'ignore').decode('ascii')
         print(f"\n--- RIFLESSIONE ITERAZIONE {iter_num} ---\n{safe_to_print[:500]}...\n")
@@ -217,7 +270,8 @@ class OrchestratorAgent:
                 metric=final_metric,
                 reflection=reflection_text,
                 feature_importance=feature_importance,
-                features_to_drop=features_to_drop
+                features_to_drop=features_to_drop,
+                business_strategy=self.business_strategy
             )
             self._update_report(iter_num, self.business_strategy, self.history[-1].get('metric') if self.history else None)
         elif final_error:
@@ -232,7 +286,8 @@ class OrchestratorAgent:
         metric: float,
         reflection: str,
         feature_importance: dict,
-        features_to_drop: list[str]
+        features_to_drop: list[str],
+        business_strategy: str | None = None
     ):
         features_used = self._extract_implemented_features()
         
@@ -243,7 +298,8 @@ class OrchestratorAgent:
             features_used=features_used,
             model_used=self.current_model or "Unknown",
             feature_importance=feature_importance,
-            pruning_decisions=features_to_drop
+            pruning_decisions=features_to_drop,
+            business_strategy=business_strategy
         )
         print(f"[*] Dati iterazione {iteration} memorizzati.")
 
@@ -345,6 +401,10 @@ class OrchestratorAgent:
     async def optimize(self):
         for i in range(1, self.max_iterations + 1):
             await self.run_iteration(i)
+            
+            if i >= 4 and self._should_stop_early(threshold=0.01, window=3):
+                print(f"[*] Early stopping attivato dopo iterazione {i}. Il modello non sta migliorando significativamente.")
+                break
         
         valid_runs = [exp for exp in self.history if exp['metric'] is not None]
         if valid_runs:

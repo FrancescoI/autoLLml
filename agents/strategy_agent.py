@@ -28,6 +28,8 @@ class StrategyAgent:
         data_sample: str,
         memory_context: str,
         last_iteration_results: dict | None = None,
+        trend_context: str = "",
+        strategy_context: str = ""
     ) -> dict:
         prompt = get_iterative_strategy_prompt(
             glossary=glossary,
@@ -35,6 +37,8 @@ class StrategyAgent:
             data_sample=data_sample,
             memory_context=memory_context,
             last_iteration_results=last_iteration_results,
+            trend_context=trend_context,
+            strategy_context=strategy_context
         )
         
         response = await self.agent.run(task=prompt)
