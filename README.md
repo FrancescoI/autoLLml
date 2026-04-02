@@ -4,16 +4,17 @@ LLM-powered Automated Machine Learning system that iteratively improves ML model
 
 ## Overview
 
-AutoLLml uses GPT-5 to generate business-aware derived features and optimize ML pipelines. The agent iteratively analyzes results, reflects on performance, and generates new feature engineering code to maximize predictive power.
+AutoLLml uses GPT-5-family models to generate business-aware derived features and optimize ML pipelines. The agent iteratively analyzes results, reflects on performance, and generates new feature engineering code to maximize predictive power.
 
 ## Features
 
-- **Business-First Feature Engineering**: Features must have real-world semantic meaning based on domain knowledge
-- **Iterative Improvement**: LLM analyzes previous results + plots to generate better features each round
-- **Multi-Modal Analysis**: Uses GPT-5 Vision to analyze feature distribution plots
-- **Automatic Pruning**: Removes noisy/redundant features
-- **Feature Selection Testing**: Dataset includes noise features to test pruning capabilities
-- **Error Recovery**: If code crashes, LLM receives error message to fix in next iteration
+- **Business-First Feature Engineering**: Features must have real-world semantic meaning based on domain knowledge and data understanding
+- **Iterative Improvement**: LLM analyzes previous results and bivariate (Xs vs Y) relationships to generate better features each round
+- **Multi-Modal Analysis**: LLM uses multi-modal capability to analyze feature distribution plots
+- **Automatic Pruning**: LLM detects noisy/redundant features
+- **Code Generation**: LLM re-writes dynamic_feature.py each round, for both feature engineering step and model selection
+- **Error Recovery**: If code crashes, LLM receives error message to fix in the next iteration
+- **Memory Management**: LLM stores successful and unsuccessful patterns in a structured format each round
 
 ## Architecture
 
@@ -80,7 +81,7 @@ python main.py
 python main.py --iterations 10
 ```
 
-### Training Only (No LLM)
+### Training Only
 
 ```bash
 python -m train --iter 1
@@ -90,8 +91,7 @@ python -m train --iter 1
 
 ```
 automl/
-├── main.py                    # Entry point (AutoGen version)
-├── agent.py                   # Legacy standalone agent
+├── main.py                    # Entry point 
 ├── utils/                     # Utilities
 │   ├── __init__.py
 │   ├── config.py              # LLM configuration (dataclasses)
@@ -119,7 +119,7 @@ automl/
 │   │   └── pruning_analyzer.py       # Feature pruning decisions
 │   └── reporting/
 │       └── report_generator.py       # Report generation
-├── train/                     # Training pipeline (modular)
+├── train/                     # Training pipeline
 │   ├── __init__.py
 │   ├── __main__.py            # Module entry point
 │   ├── cli.py                  # CLI interface
@@ -141,11 +141,11 @@ automl/
 ## How It Works
 
 1. **Baseline Run**: First iteration runs without LLM to establish a baseline metric using LogisticRegression on raw features
-2. **Strategy Generation**: PlanningAgent (via StrategyManager) analyzes glossary and data schema to generate business-focused feature strategies and recommends optimal ML models
+2. **Strategy Generation**: PlanningAgent analyzes glossary and data schema to generate business-focused feature strategies and recommends optimal ML models
 3. **Pruning Analysis**: PruningAnalyzer identifies redundant or noisy features to remove based on importance and correlations
 4. **Reflection**: EvaluatorAgent analyzes evaluation results, distribution plots, and trend context to provide actionable insights
 5. **Code Generation**: FeatureEngineeringAgent generates new feature engineering code incorporating strategy, reflection, and pruning decisions
-6. **Execution**: IterationExecutor runs the training pipeline in a subprocess, with retry logic for errors (up to 3 attempts)
+6. **Execution**: IterationExecutor runs the training pipeline in a subprocess, with retry logic for errors
 7. **Reporting**: ReportGenerator updates evaluation reports and MemoryStore saves iteration data for future learning
 8. **Early Stopping**: TrendAnalyzer checks for convergence; stops if improvement < 1% over 3 consecutive iterations
 9. **Iteration**: Process repeats up to max_iterations or until early stopping
@@ -153,7 +153,7 @@ automl/
 ## Configuration
 
 Edit `config.yaml` to change LLM settings:
-- Model selection (gpt-5.4-mini-2026-03-17)
+- Model selection (eg: gpt-5.4-mini-2026-03-17)
 - Temperature
 - Reasoning effort
 
