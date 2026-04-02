@@ -13,9 +13,9 @@ AutoLLml is an LLM-powered Automated Machine Learning system that iteratively im
 
 ## 2. System Architecture
 
-### 2.1 Agent System
+### 2.1 Agent Layer
 
-The system consists of four specialized agents coordinated by an orchestrator, plus a utility class for memory management:
+The system uses four specialized LLM-powered agents coordinated by an orchestrator:
 
 | Agent | Responsibility |
 |-------|----------------|
@@ -23,7 +23,36 @@ The system consists of four specialized agents coordinated by an orchestrator, p
 | **PlanningAgent** | Generates business-focused feature strategies and recommends optimal ML models |
 | **FeatureEngineeringAgent** | Generates Python code for feature engineering, applies pruning, and builds model pipeline |
 | **EvaluatorAgent** | Analyzes results, plots, and feature importance to provide actionable reflection |
-| **MemoryStore** | Utility class maintaining conversation history and context across iterations |
+
+### 2.2 Manager Layer
+
+| Manager | Responsibility |
+|---------|----------------|
+| **StrategyManager** | Maintains business strategy state, triggers initial and iterative strategy regeneration |
+| **ModelRecommender** | Tracks and recommends optimal ML models (LogisticRegression, RandomForest, XGBoost/LightGBM) |
+| **TrendAnalyzer** | Analyzes metric trends (improving/stagnating/declining), determines early stopping conditions |
+
+### 2.3 Pipeline Layer
+
+| Pipeline | Responsibility |
+|----------|----------------|
+| **CodeExecutionPipeline** | Generates feature engineering code, executes via subprocess, loads/saves `dynamic_features.py` |
+| **EvaluationPipeline** | Orchestrates reflection, stores iteration data in memory, extracts feature patterns |
+| **PruningAnalyzer** | Analyzes feature importance and correlations to recommend features for removal |
+
+### 2.4 Component Layer
+
+| Component | Responsibility |
+|-----------|----------------|
+| **DataContextProvider** | Loads glossary (business domain knowledge), data schema, and sample data for LLM context |
+| **IterationExecutor** | Manages subprocess execution for training, metric parsing, and error retry logic (up to 3 retries) |
+
+### 2.5 Supporting Services
+
+| Service | Responsibility |
+|---------|----------------|
+| **MemoryStore** | Persistent JSON storage tracking iterations, feature patterns, best metrics, strategy effectiveness |
+| **ReportGenerator** | Generates markdown reports with metrics, feature importance, correlations |
 
 ### 2.2 Training Pipeline
 
@@ -63,18 +92,24 @@ The optimization runs for a configurable number of iterations (default: 5).
 ### Phase 2: LLM-Driven Iterations (Iteration 2+)
 
 1. **Strategy Generation**
-   - StrategyAgent reads glossary.md and data schema
+   - PlanningAgent reads glossary.md and data schema
    - Considers trend context (improving/stagnating/declining) from memory
    - Generates 3-5 business feature strategies (not raw transforms)
    - Suggests 2-3 appropriate ML models with rationale
 
-2. **Training & Evaluation**
+2. **Model Selection**
+   - ModelRecommender selects optimal model based on data characteristics and memory
+
+3. **Pruning Analysis**
+   - PruningAnalyzer identifies features to remove (importance < 0.01 or correlation > 0.9)
+
+4. **Training & Evaluation**
    - Execute training pipeline with generated code
    - Run 5-fold cross-validation
    - Generate feature distribution plots (violin plots, bar charts)
    - Compute feature importance from model
 
-3. **Reflection**
+5. **Reflection**
    - EvaluatorAgent receives: evaluation report, feature importance, plots, trend context
    - Analyzes separability in violin plots, monotonic trends in bar charts
    - Performs trend analysis: is model improving, stagnating, or declining?
@@ -83,15 +118,15 @@ The optimization runs for a configurable number of iterations (default: 5).
    - Identifies: high-importance features, redundant features, new business logic opportunities
    - Outputs actionable feedback for next iteration
 
-4. **Code Generation**
-   - CodeAgent receives: business strategy, reflection, previous code
+6. **Code Generation**
+   - FeatureEngineeringAgent receives: business strategy, reflection, pruning, previous code
    - Generates new `dynamic_features.py`
    - Includes: derived features, feature pruning, model selection
 
-5. **Retry Loop** (on code errors)
-   - See Section 5 for details
+7. **Retry Loop** (on code errors)
+   - IterationExecutor handles retries up to 3 attempts
 
-6. **Report Update**
+8. **Report Update**
    - Append iteration results to evaluation_report.md
    - Include metrics, correlations, feature importance, business strategy applied
 
@@ -128,7 +163,7 @@ for attempt in range(1, MAX_ERROR_RETRIES + 1):
             log final error, move to next iteration
         else:
             extract error message (last 1000 chars from stdout)
-            call CodeAgent.fix_code_error(error_message, current_code)
+            call FeatureEngineeringAgent.fix_code_error(error_message, current_code)
             write fixed code to dynamic_features.py
             continue to next attempt
 ```
@@ -163,6 +198,7 @@ for attempt in range(1, MAX_ERROR_RETRIES + 1):
 | `evaluation_report.json` | Latest metrics per iteration (task_type, score_mean, score_std, feature_importance, correlations) |
 | `evaluation_report.md` | Cumulative run history with all iterations |
 | `evaluation_plots/iter_N/` | Feature distribution visualizations for iteration N |
+| `memory.json` | Persistent iteration history and patterns |
 | `best_run/` | Local directory (not git-tracked) for saving best model artifacts |
 
 ---

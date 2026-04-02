@@ -22,7 +22,7 @@ Built with **Microsoft Agent Framework (AutoGen)**, featuring a consolidated mul
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                     OrchestratorAgent                            │
-│  Coordinates the workflow between specialized agents            │
+│  Coordinates the workflow between agents, managers, pipelines  │
 └─────────────────────────┬───────────────────────────────────────┘
                           │
         ┌─────────────────┼─────────────────┐
@@ -34,6 +34,15 @@ Built with **Microsoft Agent Framework (AutoGen)**, featuring a consolidated mul
 └───────────────┘ └───────────────┘ └───────────────┘
         │                 │                 │
         ▼                 ▼                 ▼
+┌─────────────────────────────────────────────────────┐
+│         Managers: Strategy, Model, Trend            │
+├─────────────────────────────────────────────────────┤
+│         Pipelines: Code Exec, Eval, Pruning         │
+├─────────────────────────────────────────────────────┤
+│         Components: Data Context, Iteration Exec    │
+└─────────────────────────────────────────────────────┘
+        │
+        ▼
 ┌─────────────────────────────────────────────────────┐
 │                 MemoryStore                         │
 │         (Utility for persistent storage)            │
@@ -90,15 +99,26 @@ automl/
 │   └── telemetry.py           # OpenTelemetry telemetry
 ├── prompts/                   # LLM prompt templates
 │   └── __init__.py
-├── agents/                    # AutoGen agents
+├── agents/                    # AutoGen agents and components
 │   ├── __init__.py
-│   ├── strategy_agent.py       # Business strategy generation
-│   ├── code_agent.py           # Feature engineering code
-│   ├── evaluator_agent.py      # Results analysis
 │   ├── orchestrator_agent.py   # Workflow coordinator
-│   ├── memory_agent.py         # Conversation history management
-│   ├── model_selector_agent.py # ML model recommendation
-│   └── pruning_agent.py        # Feature pruning logic
+│   ├── components/
+│   │   ├── data_context_provider.py  # Data loading and context
+│   │   └── iteration_executor.py     # Subprocess execution and retries
+│   ├── llm_agents/
+│   │   ├── planning_agent.py         # Business strategy and model selection
+│   │   ├── feature_engineering_agent.py # Code generation and pruning
+│   │   └── evaluator_agent.py        # Results analysis and reflection
+│   ├── managers/
+│   │   ├── strategy_manager.py       # Strategy state management
+│   │   ├── model_recommender.py      # ML model recommendations
+│   │   └── trend_analyzer.py         # Trend analysis and early stopping
+│   ├── pipelines/
+│   │   ├── code_execution_pipeline.py # Code generation pipeline
+│   │   ├── evaluation_pipeline.py    # Reflection orchestration
+│   │   └── pruning_analyzer.py       # Feature pruning decisions
+│   └── reporting/
+│       └── report_generator.py       # Report generation
 ├── train/                     # Training pipeline (modular)
 │   ├── __init__.py
 │   ├── __main__.py            # Module entry point
@@ -120,18 +140,20 @@ automl/
 
 ## How It Works
 
-1. **Baseline Run**: First iteration runs without LLM to establish a baseline metric
-2. **Strategy Generation**: StrategyAgent analyzes the glossary and data schema to generate business-focused feature strategies
-3. **Training & Evaluation**: Train pipeline runs 5-fold cross-validation and generates distribution plots
-4. **Reflection**: EvaluatorAgent analyzes results and plots to provide insights
-5. **Code Generation**: CodeAgent generates new feature engineering code based on strategy + reflection
-6. **Feature Selection**: PruningAgent identifies and removes noisy/redundant features
-7. **Iteration**: Process repeats up to max_iterations
+1. **Baseline Run**: First iteration runs without LLM to establish a baseline metric using LogisticRegression on raw features
+2. **Strategy Generation**: PlanningAgent (via StrategyManager) analyzes glossary and data schema to generate business-focused feature strategies and recommends optimal ML models
+3. **Pruning Analysis**: PruningAnalyzer identifies redundant or noisy features to remove based on importance and correlations
+4. **Reflection**: EvaluatorAgent analyzes evaluation results, distribution plots, and trend context to provide actionable insights
+5. **Code Generation**: FeatureEngineeringAgent generates new feature engineering code incorporating strategy, reflection, and pruning decisions
+6. **Execution**: IterationExecutor runs the training pipeline in a subprocess, with retry logic for errors (up to 3 attempts)
+7. **Reporting**: ReportGenerator updates evaluation reports and MemoryStore saves iteration data for future learning
+8. **Early Stopping**: TrendAnalyzer checks for convergence; stops if improvement < 1% over 3 consecutive iterations
+9. **Iteration**: Process repeats up to max_iterations or until early stopping
 
 ## Configuration
 
-Edit `utils/config.py` to change LLM settings via `LLMConfig` dataclass:
-- Model selection (`gpt-5`, `gpt-4`, etc.)
+Edit `config.yaml` to change LLM settings:
+- Model selection (gpt-5.4-mini-2026-03-17)
 - Temperature
 - Reasoning effort
 
