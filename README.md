@@ -17,7 +17,7 @@ AutoLLml uses GPT-5 to generate business-aware derived features and optimize ML 
 
 ## Architecture
 
-Built with **Microsoft Agent Framework (AutoGen)**, featuring a multi-agent system:
+Built with **Microsoft Agent Framework (AutoGen)**, featuring a consolidated multi-agent system:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -28,20 +28,16 @@ Built with **Microsoft Agent Framework (AutoGen)**, featuring a multi-agent syst
         ┌─────────────────┼─────────────────┐
         ▼                 ▼                 ▼
 ┌───────────────┐ ┌───────────────┐ ┌───────────────┐
-│StrategyAgent  │ │  CodeAgent    │ │EvaluatorAgent │
-│Generates      │ │Generates      │ │Analyzes       │
-│business       │ │feature        │ │results and    │
-│strategy       │ │engineering    │ │reflects       │
-│               │ │code           │ │               │
+│PlanningAgent  │ │FeatureEngAgent│ │EvaluatorAgent │
+│Strategy &     │ │Code + Pruning │ │Analysis &     │
+│Model Selection│ │               │ │Reflection     │
 └───────────────┘ └───────────────┘ └───────────────┘
         │                 │                 │
         ▼                 ▼                 ▼
-┌───────────────┐ ┌───────────────┐ ┌───────────────┐
-│ MemoryAgent   │ │ModelSelector │ │ PruningAgent  │
-│Maintains      │ │Recommends    │ │Identifies     │
-│conversation   │ │optimal ML    │ │removes noisy  │
-│history        │ │model         │ │features       │
-└───────────────┘ └───────────────┘ └───────────────┘
+┌─────────────────────────────────────────────────────┐
+│                 MemoryStore                         │
+│         (Utility for persistent storage)            │
+└─────────────────────────────────────────────────────┘
 ```
 
 ## Requirements
