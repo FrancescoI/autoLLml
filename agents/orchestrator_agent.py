@@ -6,12 +6,10 @@ import re
 import pandas as pd
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 
-from .strategy_agent import StrategyAgent
-from .code_agent import CodeAgent
+from .planning_agent import PlanningAgent
+from .feature_engineering_agent import FeatureEngineeringAgent
 from .evaluator_agent import EvaluatorAgent
-from .memory_agent import MemoryAgent
-from .model_selector_agent import ModelSelectorAgent
-from .pruning_agent import PruningAgent
+from utils.memory_store import MemoryStore
 from utils.config import get_paths, get_agent_config
 
 
@@ -43,17 +41,15 @@ class OrchestratorAgent:
             self.data_schema = "Dati non caricati."
             self.data_sample = "N/A"
         
-        self.strategy_agent = StrategyAgent(model_client)
-        self.code_agent = CodeAgent(model_client)
+        self.planning_agent = PlanningAgent(model_client)
+        self.feature_engineering_agent = FeatureEngineeringAgent(model_client)
         self.evaluator_agent = EvaluatorAgent(model_client)
-        self.memory_agent = MemoryAgent()
-        self.model_selector = ModelSelectorAgent(model_client)
-        self.pruning_agent = PruningAgent(model_client)
+        self.memory_store = MemoryStore()
         
-        print("[*] OrchestratorAgent inizializzato con tutti gli agenti")
+        print("[*] OrchestratorAgent inizializzato con agenti consolidati")
 
     def _get_trend_context(self) -> str:
-        trend_info = self.memory_agent.get_trend_info()
+        trend_info = self.memory_store.get_trend_info()
         if trend_info["trend"] == "insufficient_data":
             return ""
         
@@ -69,8 +65,8 @@ class OrchestratorAgent:
             return f"Tendenza: STAGNO/PLATEAU ({vals_str})"
 
     def _get_feature_patterns_context(self) -> tuple[str, str]:
-        successful = self.memory_agent.get_successful_patterns(limit=3)
-        failed = self.memory_agent.get_failed_patterns(limit=3)
+        successful = self.memory_store.get_successful_patterns(limit=3)
+        failed = self.memory_store.get_failed_patterns(limit=3)
         
         success_str = "\n".join([f"- {p['feature_name']}: {p.get('reason', 'N/A')}" for p in successful]) if successful else "Nessuna feature di successo registrata."
         fail_str = "\n".join([f"- {p['feature_name']}: {p.get('reason', 'N/A')}" for p in failed]) if failed else "Nessuna feature fallita registrata."
@@ -78,7 +74,7 @@ class OrchestratorAgent:
         return success_str, fail_str
 
     def _should_stop_early(self, threshold: float = 0.01, window: int = 3) -> bool:
-        history = self.memory_agent.data.get("metric_history", [])
+        history = self.memory_store.data.get("metric_history", [])
         if len(history) < window + 1:
             return False
         
@@ -127,11 +123,11 @@ class OrchestratorAgent:
         return iteration_data
 
     async def _run_llm_iteration(self, iter_num: int) -> dict:
-        memory_context = self.memory_agent.get_context()
+        memory_context = self.memory_store.get_context()
         
         if self.business_strategy is None:
             print("[*] Generazione strategia iniziale con StrategyAgent...")
-            strategy_result = await self.strategy_agent.generate_strategy(
+            strategy_result = await self.planning_agent.generate_strategy(
                 self.glossary,
                 self.data_schema,
                 self.data_sample
@@ -140,10 +136,10 @@ class OrchestratorAgent:
             print(f"[*] Strategia generata: {self.business_strategy[:100]}...")
         else:
             print("[*] Riesecuzione strategia con contesto memoria...")
-            last_iter = self.memory_agent.get_last_iteration()
+            last_iter = self.memory_store.get_last_iteration()
             trend_context = self._get_trend_context()
-            strategy_context = self.memory_agent.get_strategy_context()
-            strategy_result = await self.strategy_agent.generate_iterative_strategy(
+            strategy_context = self.memory_store.get_strategy_context()
+            strategy_result = await self.planning_agent.generate_iterative_strategy(
                 self.glossary,
                 self.data_schema,
                 self.data_sample,
@@ -169,7 +165,7 @@ class OrchestratorAgent:
         feature_importance = report.get("feature_importance", {})
         
         print("[*] Raccomandazione modello con ModelSelectorAgent...")
-        model_rec = await self.model_selector.recommend_model(
+        model_rec = await self.planning_agent.recommend_model(
             data_schema=self.data_schema,
             data_sample=self.data_sample,
             glossary=self.glossary,
@@ -181,7 +177,7 @@ class OrchestratorAgent:
         
         print("[*] Analisi pruning con PruningAgent...")
         correlations = report.get("correlations", {})
-        pruning_result = await self.pruning_agent.analyze_and_prune(
+        pruning_result = await self.feature_engineering_agent.analyze_and_prune(
             feature_importance=feature_importance,
             correlations=correlations if correlations else None,
             memory_context=memory_context
@@ -209,7 +205,7 @@ class OrchestratorAgent:
         last_code = self._load_last_code()
         
         print("[*] Generazione codice con CodeAgent...")
-        new_code = await self.code_agent.generate_code(
+        new_code = await self.feature_engineering_agent.generate_code(
             self.business_strategy,
             reflection_text,
             last_code,
@@ -251,7 +247,7 @@ class OrchestratorAgent:
                 print(f"[!] Training fallito. Retry {retries}/{self.max_error_retries} con fix errore...")
                 print(f"[*] Errore: {error_msg[:200]}...")
                 
-                current_code = await self.code_agent.fix_code_error(
+                current_code = await self.feature_engineering_agent.fix_code_error(
                     error_message=error_msg,
                     previous_code=current_code
                 )
@@ -291,7 +287,7 @@ class OrchestratorAgent:
     ):
         features_used = self._extract_implemented_features()
         
-        self.memory_agent.store(
+        self.memory_store.store(
             iteration=iteration,
             metric=metric,
             reflection=reflection,

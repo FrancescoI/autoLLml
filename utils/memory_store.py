@@ -6,7 +6,7 @@ from typing import Any, Union
 from utils.config import get_paths
 
 
-class MemoryAgent:
+class MemoryStore:
     def __init__(self):
         paths = get_paths()
         self.memory_file = paths.memory
